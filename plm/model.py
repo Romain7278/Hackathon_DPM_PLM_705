@@ -221,9 +221,13 @@ class PlmModel:
     def material_of(self, part):
         return self.materials.get(part["material"])
 
-    def material_cost(self, part):
+    def material_price(self, part):
+        """Prix de la matière pour cette pièce : l'analyse d'impacts peut le modifier pièce par pièce."""
         material = self.material_of(part)
-        return part["usage_kg"] * material["price_eur_kg"] if material and part.get("usage_kg") else 0.0
+        return part.get("material_price_eur_kg", material["price_eur_kg"]) if material else 0.0
+
+    def material_cost(self, part):
+        return part["usage_kg"] * self.material_price(part) if part.get("usage_kg") else 0.0
 
     def should_cost(self, part):
         if not part.get("usage_kg"):
@@ -394,13 +398,13 @@ class PlmModel:
         ids = {node.part_id, node.id}
         if node.wrapper:
             ids.add(node.wrapper["xml_id"])
-        return [f for f in self.findings if f["product_id"] in ids]
+        return [f for f in self.findings if f["product_id"] in ids or f.get("related") in ids]
 
     def subtree_findings(self, node):
-        found = list(self.findings_for_node(node))
+        found = {id(f): f for f in self.findings_for_node(node)}
         for child in node.children:
-            found.extend(self.subtree_findings(child))
-        return found
+            found.update({id(f): f for f in self.subtree_findings(child)})
+        return list(found.values())
 
 
 def load_model(xml_path=DATA_XML):

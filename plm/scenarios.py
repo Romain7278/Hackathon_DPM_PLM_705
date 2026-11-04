@@ -26,79 +26,113 @@ def blocked_chain(model, part_id):
 # ---------------------------------------------------------------- Criticité
 
 
+CRITERIA = [
+    dict(key="sources", label="Sources qualifiées", max=35, scale="Aucune source qualifiée ou aucun fournisseur : 35. Une seule : 30 sans alternative référencée, 25 sinon. Deux : 8. Trois ou plus : 2."),
+    dict(key="replacement", label="Remplacement", max=15, scale="Deux sources qualifiées ou plus : 2. Sinon, aucune alternative en cours : 15. Alternative prête en 26 semaines ou plus : 12, en 12 à 25 semaines : 8, en moins de 12 semaines : 4."),
+    dict(key="lead_time", label="Délai de livraison", max=10, scale="60 jours ou plus : 10. De 30 à 59 jours : 6. Moins de 30 jours : 2. Fournisseur inconnu : 6."),
+    dict(key="origin", label="Origine", max=10, scale="Risque géographique faible : 0. Moyen (Turquie, Serbie, Maroc, Inde, Taïwan) : 6. Élevé (Chine) : 10. Fournisseur inconnu : 6."),
+    dict(key="finance", label="Santé financière", max=10, scale="Notation A : 0. B : 4. C : 10. Fournisseur inconnu : 4."),
+    dict(key="class", label="Classe fonctionnelle", max=10, scale="A (vitale) : 10. B : 5. C (standard) : 1."),
+    dict(key="interfaces", label="Interdépendances", max=5, scale="5 interfaces ou plus : 5. 3 ou 4 : 3. Moins : 1."),
+    dict(key="cost", label="Poids dans le coût", max=5, scale="5 % ou plus de la nomenclature : 5. De 2 à 5 % : 3. Moins : 1."),
+]
+TECHNICAL_CRITERION = dict(key="technical", label="Changement technique", max=15, scale="Analyse d'impacts uniquement. Option d'allègement à faisabilité moyenne : 5, faible : 10. Magnésium : 5 de plus.")
+
+
 def criticality(model):
-    """Score sur 100, avec le détail des critères. Une pièce mono-source est au moins « Critique » si elle est de classe A ou B."""
+    """Score de risque sur 100 : somme de 8 critères, détaillée dans "breakdown".
+    Une pièce de classe A ou B avec au plus un fournisseur qualifié est toujours « Critique »."""
     total_cost = model.bom_cost()
     rows = []
     for part in model.physical_parts:
         part_id = part["xml_id"]
         links = part["sourcing"]
         qualified = model.qualified_links(part)
-        reasons = []
-        score = 0
-
         klass = part.get("criticality", "C")
         commodity = 0.5 if klass == "C" else 1  # une pièce standard se requalifie vite ailleurs
+        reasons = []
+        points = {}
+        details = {}
+
+        def add(key, value, detail):
+            points[key] = value
+            details[key] = detail
+
         if not links:
-            score += 35
+            add("sources", 35, "Aucun fournisseur désigné")
             reasons.append("Aucun fournisseur désigné")
         elif not qualified:
-            score += 35
+            add("sources", 35, f"Aucune source qualifiée sur {len(links)} référencée(s)")
             reasons.append("Aucune source qualifiée")
         elif len(qualified) == 1:
-            score += (30 if len(links) == 1 else 25) * commodity
+            add("sources", (30 if len(links) == 1 else 25) * commodity, f"1 source qualifiée sur {len(links)} référencée(s)" + (", points divisés par 2 (classe C)" if commodity < 1 else ""))
             reasons.append("Un seul fournisseur qualifié" + ("" if len(links) > 1 else ", aucune alternative référencée"))
         elif len(qualified) == 2:
-            score += 8
+            add("sources", 8, "2 sources qualifiées")
         else:
-            score += 2
+            add("sources", 2, f"{len(qualified)} sources qualifiées")
 
         alternatives = [l["requal_weeks"] + l["ramp_up_weeks"] for l in links if l["qualification"] not in QUALIFIED]
         if qualified and len(qualified) > 1:
-            score += 2
+            add("replacement", 2, "Une autre source qualifiée prend le relais")
         elif not alternatives:
-            score += 15 * commodity
+            add("replacement", 15 * commodity, "Aucune alternative en cours" + (", points divisés par 2 (classe C)" if commodity < 1 else ""))
         else:
             fastest = min(alternatives)
-            score += 12 if fastest >= 26 else 8 if fastest >= 12 else 4
+            add("replacement", 12 if fastest >= 26 else 8 if fastest >= 12 else 4, f"Alternative prête en {fastest} semaines au mieux")
             reasons.append(f"Alternative disponible en {fastest} semaines au mieux")
 
         primary = model.primary_link(part)
         if primary:
             supplier = model.suppliers[primary["supplier"]]
             lead = primary["lead_time_days"]
-            score += 10 if lead >= 60 else 6 if lead >= 30 else 2
+            add("lead_time", 10 if lead >= 60 else 6 if lead >= 30 else 2, f"{lead} jours chez {supplier['name']}")
             if lead >= 60:
                 reasons.append(f"Délai long : {lead} jours")
-            score += {1: 0, 2: 6, 3: 10}[supplier["geo_risk"]]
+            add("origin", {1: 0, 2: 6, 3: 10}[supplier["geo_risk"]], supplier["country_name"])
             if supplier["geo_risk"] >= 2:
                 reasons.append(f"Origine exposée : {supplier['country_name']}")
-            score += {"A": 0, "B": 4, "C": 10}[supplier["financial_rating"]]
+            add("finance", {"A": 0, "B": 4, "C": 10}[supplier["financial_rating"]], f"Notation {supplier['financial_rating']}")
             if supplier["financial_rating"] == "C":
                 reasons.append(f"Santé financière fragile : {supplier['name']} noté C")
+        else:
+            add("lead_time", 6, "Inconnu : aucun fournisseur actif")
+            add("origin", 6, "Inconnue : aucun fournisseur actif")
+            add("finance", 4, "Inconnue : aucun fournisseur actif")
 
-        score += {"A": 10, "B": 5, "C": 1}[klass]
+        add("class", {"A": 10, "B": 5, "C": 1}[klass], f"Classe {klass}")
         if klass == "A":
             reasons.append("Fonction vitale (classe A)")
 
         interfaces = len(model.real_interfaces(part_id))
-        score += 5 if interfaces >= 5 else 3 if interfaces >= 3 else 1
+        add("interfaces", 5 if interfaces >= 5 else 3 if interfaces >= 3 else 1, f"{interfaces} interface(s)")
         if interfaces >= 5:
             reasons.append(f"{interfaces} interdépendances")
 
         cost_share = model.line_cost(part) / total_cost
-        score += 5 if cost_share >= 0.05 else 3 if cost_share >= 0.02 else 1
+        add("cost", 5 if cost_share >= 0.05 else 3 if cost_share >= 0.02 else 1, f"{cost_share:.1%} de la nomenclature".replace(".", ","))
         if cost_share >= 0.05:
             reasons.append(f"{cost_share:.0%} du coût de la nomenclature")
 
-        score = min(round(score), 100)
+        technical = part.get("technical_risk", 0)
+        if technical:
+            add("technical", technical, "Option d'allègement non éprouvée")
+            reasons.append("Changement technique en cours")
+
+        score = min(round(sum(points.values())), 100)
         level = next(name for name, threshold in LEVELS if score >= threshold)
         single_source = model.is_single_source(part)
+        level_reason = f"Score de {score}"
         if single_source and klass in ("A", "B"):
+            if level != "Critique":
+                level_reason = f"Score de {score}, relevé à Critique : classe {klass} avec au plus un fournisseur qualifié"
             level = "Critique"
         elif single_source and level in ("Faible", "Modéré"):
+            level_reason = f"Score de {score}, relevé à Élevé : au plus un fournisseur qualifié"
             level = "Élevé"
 
+        all_criteria = CRITERIA + ([TECHNICAL_CRITERION] if technical else [])
+        breakdown = [{"key": c["key"], "label": c["label"], "max": c["max"], "points": points[c["key"]], "detail": details[c["key"]]} for c in all_criteria]
         countries = sorted({model.suppliers[l["supplier"]]["country_name"] for l in model.active_links(part)})
         rows.append({
             "part_id": part_id,
@@ -107,7 +141,9 @@ def criticality(model):
             "plm_name": part["name"],
             "score": score,
             "level": level,
+            "level_reason": level_reason,
             "reasons": reasons,
+            "breakdown": breakdown,
             "sources_referenced": len(links),
             "sources_qualified": len(qualified),
             "single_source": single_source,
@@ -956,14 +992,14 @@ def summarize_plan(model, chosen, perimeter_mass):
     }
 
 
-def mass_plan(model, perimeter_id="ID_0", target_saving_kg=None, min_feasibility="MEDIUM", max_weeks=None):
+def mass_plan(model, perimeter_id="ID_0", target_saving_kg=None, min_feasibility="MEDIUM", max_weeks=None, allowed_parts=None):
     """Plan au meilleur coût : options triées par coût du kg gagné (heuristique gloutonne), une seule option par pièce."""
     max_weeks = model.weeks_to_sop if max_weeks is None else max_weeks
     perimeter_mass = model.nodes[perimeter_id].total_mass
     if target_saving_kg is None:
         target_saving_kg = max(0.0, perimeter_mass - model.program["mass_target_kg"]) if perimeter_id == "ID_0" else 0.05 * perimeter_mass
     options = mass_options(model, perimeter_id)
-    eligible = [o for o in options if FEASIBILITY_RANK[o["feasibility"]] >= FEASIBILITY_RANK[min_feasibility] and o["weeks"] <= max_weeks]
+    eligible = [o for o in options if FEASIBILITY_RANK[o["feasibility"]] >= FEASIBILITY_RANK[min_feasibility] and o["weeks"] <= max_weeks and (not allowed_parts or o["part_id"] in allowed_parts)]
     chosen = []
     used = set()
     saved = 0.0
@@ -996,7 +1032,7 @@ def mass_plan(model, perimeter_id="ID_0", target_saving_kg=None, min_feasibility
 
 
 def product_kpis(model):
-    from plm.quality import counts
+    from plm.quality import control_findings, counts
 
     table = concentration(model)
     crit = criticality(model)
@@ -1016,7 +1052,7 @@ def product_kpis(model):
         "single_source_parts": table["single_source_parts"],
         "critical_parts": sum(r["level"] == "Critique" for r in crit),
         "interfaces": len(model.enrichment["interfaces"]),
-        "alerts": counts(model.findings),
+        "alerts": counts(control_findings(model.findings)),
         "release_ready": release["ready"],
         "release_total": release["total"],
         "bounding_box_mm": model.bounding_box(),

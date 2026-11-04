@@ -140,7 +140,7 @@ def data_alerts(model, severity=None, domain=None, part=None, limit=25):
 def critical_parts(model, top=10):
     rows = scenarios.criticality(model)
     selected = rows[:top]
-    fields = ("name", "plm_id", "score", "level", "reasons", "sources_qualified", "sources_referenced", "origin", "interfaces", "mass_kg", "line_cost", "cost_share", "quantity")
+    fields = ("name", "plm_id", "score", "level", "level_reason", "reasons", "breakdown", "sources_qualified", "sources_referenced", "origin", "interfaces", "mass_kg", "line_cost", "cost_share", "quantity")
     return {
         "levels": {level: sum(r["level"] == level for r in rows) for level, _ in scenarios.LEVELS},
         "rule": "Score sur 100 : sources, délai de remplacement, délai, origine, santé financière, classe fonctionnelle, interdépendances, poids dans le coût. Une pièce de classe A ou B avec un seul fournisseur qualifié est critique.",

@@ -97,7 +97,7 @@ def build_claude_tools(model, recorder, on_tool):
 
         Args:
             severite: Bloquant, Attention ou Info.
-            domaine: Données manquantes, Incohérence, Approvisionnement, Structure ou Nommage.
+            domaine: Données manquantes, Cohérence parent-enfant, Incohérence, Approvisionnement, Structure ou Nommage.
             piece: Limite aux alertes de cette pièce ou de cet assemblage et de ses enfants.
         """
         return run("Contrôle des données", tools.data_alerts, severity=severite, domain=domaine, part=piece)
@@ -359,7 +359,7 @@ def local_alerts(model, question):
     query = normalize(question)
     nodes = model.find_part(question)
     part = nodes[0].id if len(nodes) == 1 and re.search(r"(sur|de la|du) ", query) else None
-    domain = "Incohérence" if re.search(r"incoheren|maturite", query) else "Données manquantes" if "manquant" in query else None
+    domain = "parent-enfant" if re.search(r"incoheren|maturite|parent", query) else "Données manquantes" if re.search(r"manquant|vide", query) else None
     result = tools.data_alerts(model, part=part, domain=domain)
     totals = result["totals"]
     lines = [f"{a['severity']} · **{a['name']}** : {a['message']}" for a in result["alerts"][:6]]

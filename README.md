@@ -1,13 +1,15 @@
 # PLM Intelligence : dashboard e-drive 410 kW
 
-Dashboard Streamlit à deux onglets (Product Explorer, Risques et impacts) avec un chatbot global qui cite ses sources PLM.
+Dashboard Streamlit à trois onglets : Product Explorer, Risques et interdépendances, Analyse d'impacts. Un bouton en bas à gauche ouvre un assistant qui cite ses sources PLM.
 
 ## Lancer
 
 ```bash
-pip install -r requirements.txt
-streamlit run app.py
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
+
+Passez par `python -m` : la commande `streamlit` seule n'est pas reconnue quand le dossier des scripts Python n'est pas dans le PATH, ce qui est courant avec Anaconda sous Windows.
 
 ## Activer Claude dans le chatbot (facultatif)
 
@@ -29,8 +31,9 @@ Ne partagez jamais ce fichier. Le modèle utilisé est défini par `MODEL_ID` da
 | `data/XPDMXML_ECAR_PLM_ENRICHED.xml` | XML enrichi lu par le dashboard |
 | `plm_parser.py` | Lit le XML, d'origine ou enrichi |
 | `plm/model.py` | Arbre, coûts, sources, relations, positions |
-| `plm/quality.py` | Alertes : données manquantes, incohérences |
-| `plm/scenarios.py` | Criticité et les 5 scénarios |
+| `plm/quality.py` | Alertes : données manquantes ou vides, cohérence parent-enfant, autres constats par pièce |
+| `plm/scenarios.py` | Score de risque détaillé et calculs par scénario |
+| `plm/impact.py` | Analyse d'impacts : facteurs combinés appliqués à une copie du produit, score qualité, comparaison à la référence |
 | `plm/tools.py`, `plm/assistant.py` | Outils et chatbot |
 | `ui/`, `components/`, `app.py` | Interface |
 
@@ -60,3 +63,5 @@ Les fournisseurs et les événements sont **fictifs**. Toute ressemblance avec u
 - L'export ne contient pas la géométrie 3D : les positions sont réelles, mais chaque point est l'origine d'une pièce.
 - Les scénarios de rupture et de prix sont calculés à cadence série, alors que le démarrage série n'a lieu qu'en septembre 2027.
 - Le plan d'allègement est une heuristique : options triées par coût du kg gagné, une option par pièce.
+- Les scores de risque et de qualité sont des indicateurs de travail, à calibrer avec des experts : leurs barèmes sont affichés dans l'application.
+- L'analyse d'impacts montre un état : la rupture pendant l'arrêt, le changement de fournisseur une fois qualifié, le prix à plein régime.

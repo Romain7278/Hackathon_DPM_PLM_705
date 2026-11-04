@@ -8,10 +8,10 @@ import streamlit.components.v1 as components
 
 from plm import scenarios
 from plm.fmt import compact_eur, eur, kg, number, pct
-from plm.model import CLAUSE_LABELS, FAMILIES, MATURITY_RANK, QUALIFICATION_LABELS, normalize
-from plm.quality import INFO, SEVERITY_ICONS, SEVERITY_RANK, counts
+from plm.model import CLAUSE_LABELS, FAMILIES, QUALIFICATION_LABELS, normalize
+from plm.quality import INFO, MISSING, PARENT_CHILD, SEVERITY_ICONS, SEVERITY_RANK, control_findings, counts, field_completeness, parent_child_links
 from ui import theme
-from ui.state import EXPLORER_TREE, open_from_table, select_node, selected_id
+from ui.state import EXPLORER_TREE, close_detail, open_from_table, select_node, selected_id
 
 COMPONENT_DIR = Path(__file__).resolve().parent.parent / "components" / "plm_tree"
 plm_tree = components.declare_component("plm_tree", path=str(COMPONENT_DIR))
@@ -24,8 +24,9 @@ TREE_HEIGHT = 700
 
 
 def tree_payload(model, node):
-    own = counts(model.findings_for_node(node))
-    subtree = counts(model.subtree_findings(node))
+    # Les pastilles de l'arbre signalent seulement les contrôles du XML et la cohérence parent-enfant.
+    own = counts(control_findings(model.findings_for_node(node)))
+    subtree = counts(control_findings(model.subtree_findings(node)))
     product = node.product
     ei = node.wrapper["maturity"] if node.wrapper and node.wrapper["maturity"] != product["maturity"] else None
     # Un assemblage trouvé ouvre tout son contenu : on ne cherche donc que dans son nom, pas dans sa description.
@@ -65,7 +66,7 @@ def render_kpis(model):
     columns[2].metric("Coût nomenclature", eur(kpis["bom_cost"]), help="Coût simulé par e-drive, moyenne des prix fournisseurs pondérée par les parts de volume.")
     columns[3].metric("Fournisseurs actifs", f"{kpis['suppliers_active']} ({kpis['countries']} pays)")
     columns[4].metric("Pièces mono-source", kpis["single_source_parts"], help="Pièces avec au plus un fournisseur qualifié.")
-    columns[5].metric("Alertes bloquantes", alerts["Bloquant"], help=f"{alerts['Attention']} points d'attention et {alerts['Info']} informations en plus.")
+    columns[5].metric("Alertes bloquantes", alerts["Bloquant"], help=f"Données manquantes et cohérence parent-enfant. {alerts['Attention']} point d'attention et {alerts['Info']} informations en plus.")
     columns[6].metric("Encombrement (mm)", f"{box[0]}×{box[1]}×{box[2]}", help="Boîte englobante des origines d'instances du XML : ordre de grandeur, la géométrie 3D n'est pas dans l'export.")
 
 
@@ -338,11 +339,13 @@ def render_alerts_block(model, node):
 def render_detail(model, node):
     part = node.product
     path = node.path()
-    with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+    crumbs, close = st.columns([5, 2], vertical_alignment="center")
+    with crumbs, st.container(horizontal=True, vertical_alignment="center", gap="small"):
         for step in path[:-1]:
             st.button(step.label, key=f"crumb_{step.id}", type="tertiary", on_click=select_node, args=(step.id,))
             st.markdown("›")
         st.markdown(f"**{escape(node.label)}**")
+    close.button("Fermer la fiche", icon=":material/close:", key="close_detail", on_click=close_detail, width="stretch")
 
     quantity = f" × {node.quantity}" if node.quantity > 1 else ""
     title = node.label if node.is_assembly or len(model.nodes_by_part[node.part_id]) > 1 else model.node_label(node.part_id)
@@ -386,19 +389,25 @@ def render_detail(model, node):
         render_cost(model, node)
 
 
+def sync_tree_selection():
+    """Lit le clic de l'arbre avant la mise en page : la fiche s'ouvre dès ce passage."""
+    value = st.session_state.get("plm_tree")
+    if value and value["n"] != st.session_state.get("tree_last_click"):
+        st.session_state.tree_last_click = value["n"]
+        st.session_state.selected_id = value["id"]
+
+
 def render_tree_tab(model):
-    left, right = st.columns([5, 7], gap="medium")
-    current = selected_id(model)
-    with left:
-        value = plm_tree(tree=_payload(model), selected=current, height=TREE_HEIGHT, maturities=MATURITIES,
-                         families=FAMILIES, key="plm_tree", default=None)
-        if value and value != st.session_state.get("tree_last_value"):
-            st.session_state.tree_last_value = value
-            st.session_state.selected_id = value
-            current = value
-    node = model.nodes.get(current, model.tree)
-    with right:
-        render_detail(model, node)
+    sync_tree_selection()
+    current = selected_id()
+    node = model.nodes.get(current) if current else None
+    st.caption("Cliquez sur un composant pour ouvrir sa fiche. Le bouton Liste / Arbre change l'affichage.")
+    columns = st.columns([5, 7], gap="medium") if node else st.columns([1])
+    with columns[0]:
+        plm_tree(tree=_payload(model), selected=current, height=TREE_HEIGHT, maturities=MATURITIES, families=FAMILIES, key="plm_tree", default=None)
+    if node:
+        with columns[1]:
+            render_detail(model, node)
 
 
 def _payload(model):
@@ -471,25 +480,51 @@ def node_for_product(model, product_id):
     return model.nodes_by_part[product_id][0]
 
 
+def render_missing_section(model, found):
+    st.markdown(f"##### {MISSING}")
+    left, right = st.columns([7, 5], gap="medium")
+    rows = [{"Gravité": f"{SEVERITY_ICONS[f['severity']]} {f['severity']}", "Élément": f["element"] or node_for_product(model, f["product_id"]).label, "Champ": f["field"], "Constat": f["message"]} for f in found]
+    ids = [None if f["element"] else node_for_product(model, f["product_id"]).id for f in found]
+    with left:
+        st.dataframe(rows, hide_index=True, width="stretch", key="dq_missing", on_select=open_from_table("dq_missing", ids), selection_mode="single-row",
+                     column_config={"Constat": st.column_config.TextColumn(width="large")})
+        st.caption("Cochez une ligne pour ouvrir la fiche de la pièce. Un champ vide sur tout un type d'objet donne une seule ligne.")
+    completeness = field_completeness(model)
+    gaps = [{"Objet": r["object"], "Champ": r["field"], "Remplis": f"{r['filled']} / {r['total']}", "Taux": r["rate"]} for r in completeness if r["filled"] < r["total"]]
+    with right:
+        st.dataframe(gaps, hide_index=True, width="stretch", column_config={"Taux": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent")})
+        complete = sum(r["filled"] == r["total"] for r in completeness)
+        with st.expander(f"Tous les champs contrôlés ({len(completeness)}, dont {complete} complets)"):
+            st.dataframe([{"Objet": r["object"], "Champ": r["field"], "Remplis": f"{r['filled']} / {r['total']}", "Taux": r["rate"]} for r in completeness], hide_index=True, width="stretch",
+                         column_config={"Taux": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent")})
+        st.caption("Un assemblage sans matériau est normal : ce cas n'est pas signalé.")
+
+
+def render_parent_child_section(model):
+    links = parent_child_links(model)
+    issues = links["issues"]
+    st.markdown(f"##### {PARENT_CHILD}")
+    theme.note("<b>Règle :</b> un parent FROZEN ou RELEASED ne peut pas être plus avancé que ses enfants directs, et un enfant OBSOLETE ne devrait plus être utilisé par un parent actif. "
+               "Échelle de maturité : PRIVATE, IN_WORK, FROZEN, RELEASED.")
+    rows = [{"Parent": r["parent"], "Maturité du parent": r["parent_maturity"], "Enfant": r["child"], "Maturité de l'enfant": r["child_maturity"], "Écart (niveaux)": r["gap"], "Constat": f"🔴 {r['problem']}"} for r in issues]
+    ids = [node_for_product(model, r["child_id"]).id for r in issues]
+    st.dataframe(rows, hide_index=True, width="stretch", key="dq_links", on_select=open_from_table("dq_links", ids), selection_mode="single-row",
+                 column_config={"Constat": st.column_config.TextColumn(width="medium")})
+    st.caption(f"{links['checked']} liens parent-enfant du XML vérifiés, {len(issues)} incohérents. Cochez une ligne pour ouvrir la fiche de l'enfant.")
+
+
 def render_quality_tab(model):
-    total = counts(model.findings)
+    found = control_findings(model.findings)
+    total = counts(found)
+    links = parent_child_links(model)
     columns = st.columns(4)
     columns[0].metric("🔴 Bloquant", total["Bloquant"], help="À corriger avant toute release.")
-    columns[1].metric("🟠 Attention", total["Attention"], help="Risque ou donnée à vérifier.")
+    columns[1].metric("🟠 Attention", total["Attention"], help="Donnée à vérifier.")
     columns[2].metric("🔵 Info", total["Info"], help="Amélioration de la qualité des données.")
-    columns[3].metric("Pièces sans alerte", sum(1 for leaf in model.leaves if not [f for f in model.findings_for_node(leaf) if f["severity"] != INFO]))
-
-    domains = sorted({f["domain"] for f in model.findings})
-    left, right = st.columns([3, 5])
-    st.session_state.setdefault("dq_severity", ["Bloquant", "Attention"])
-    severity = left.pills("Gravité", list(SEVERITY_RANK), key="dq_severity", selection_mode="multi")
-    domain = right.pills("Domaine", domains, key="dq_domain", selection_mode="multi")
-    kept = [f for f in model.findings if (not severity or f["severity"] in severity) and (not domain or f["domain"] in domain)]
-    rows = [{"Gravité": f"{SEVERITY_ICONS[f['severity']]} {f['severity']}", "Domaine": f["domain"], "Élément": node_for_product(model, f["product_id"]).label, "Constat": f["message"], "Règle": f["rule"], "Nom PLM": f["name"]} for f in kept]
-    ids = [node_for_product(model, f["product_id"]).id for f in kept]
-    st.caption(f"{len(rows)} constat(s). Cochez une ligne pour ouvrir la fiche de l'élément.")
-    st.dataframe(rows, hide_index=True, width="stretch", height=520, key="dq_table", on_select=open_from_table("dq_table", ids), selection_mode="single-row",
-                 column_config={"Constat": st.column_config.TextColumn(width="large")})
+    columns[3].metric("Liens parent-enfant cohérents", f"{links['checked'] - len(links['issues'])} / {links['checked']}")
+    render_missing_section(model, [f for f in found if f["domain"] == MISSING])
+    render_parent_child_section(model)
+    st.caption("Les autres constats (approvisionnement, nommage, structure, cycle de vie) restent affichés sur la fiche de chaque pièce.")
 
 
 # ------------------------------------------------------------------ Répartition et espace

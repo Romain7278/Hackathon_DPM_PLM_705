@@ -92,6 +92,8 @@ def parse_instance(element):
         "plm_id": text(element, "ID"),
         "parent": text(element, "Owned"),
         "child": text(element, "Instancing"),
+        "name": text(element, "Name"),
+        "description": text(element, "Description"),
         "order": float(text(element, "ChildOrder")),
         "translation": numbers(text(transform, "Translation3D")),
         "rotation": numbers(text(transform, "Rotation3D")),
@@ -104,6 +106,7 @@ def parse_rep_3d(element):
         "xml_id": element.get("id"),
         "plm_id": text(element, "ID"),
         "name": text(element, "Name"),
+        "description": text(element, "Description"),
         "revision": text(element, "RevisionName"),
     }
 

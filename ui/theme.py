@@ -7,6 +7,7 @@ import streamlit as st
 # Palette validée avec le script du skill dataviz, dans cet ordre fixe. Une famille garde toujours sa couleur.
 FAMILY_COLORS = {"Acier": "#2a78d6", "Aluminium": "#eb6834", "Acier électrique": "#1baf7a", "Cuivre": "#eda100", "Fonte": "#e87ba4", "Polymère": "#008300", "Magnésium": "#6250d6"}
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a"]
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
 # Maturité : échelle ordonnée à une seule teinte, plus sombre quand la pièce est plus avancée.
 MATURITY_COLORS = {"PRIVATE": "#b7d3f6", "IN_WORK": "#3987e5", "FROZEN": "#1c5cab", "RELEASED": "#0d366b", "OBSOLETE": "#d03b3b"}
 STATUS_COLORS = {"Prêt": "#0ca30c", "À promouvoir": "#fab219", "En retard": "#ec835a", "Bloquant": "#d03b3b", "À exclure": "#c3c2b7"}
@@ -21,9 +22,35 @@ NEUTRAL_BAR = "#52514e"
 
 CSS = """
 <style>
-.stMainBlockContainer { padding: 1rem 1.6rem 3rem; max-width: 100%; }
-section[data-testid="stSidebar"] { min-width: 390px; max-width: 460px; }
-section[data-testid="stSidebar"] .stMainBlockContainer, section[data-testid="stSidebarContent"] { padding-top: .2rem; }
+.stMainBlockContainer { padding: 1rem 1.6rem 5rem; max-width: 100%; }
+/* Assistant : bouton flottant, puis panneau sur le quart gauche. Le contenu de la page se décale au lieu d'être recouvert. */
+.stMainBlockContainer:has(.st-key-chat_panel) { margin-left: max(25vw, 320px); width: calc(100% - max(25vw, 320px)); }
+.st-key-chat_toggle { position: fixed; left: 20px; bottom: 20px; z-index: 1000; width: auto; }
+.st-key-chat_toggle button { background: #0d366b; color: #fff; border: 0; border-radius: 999px; padding: 8px 18px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.st-key-chat_toggle button:hover, .st-key-chat_toggle button:focus { background: #1c5cab; color: #fff; }
+.st-key-chat_panel { position: fixed; left: 0; top: 0; bottom: 0; width: 25vw; min-width: 320px; height: 100vh; z-index: 1000000; background: #fff; border-right: 1px solid #e1e0d9; padding: 12px 14px; overflow: hidden; box-shadow: 2px 0 12px rgba(0,0,0,.08); }
+.st-key-chat_panel > [data-testid="stLayoutWrapper"]:has(> .st-key-chat_history) { flex: 1 1 0 !important; height: auto !important; min-height: 0; }
+.st-key-chat_history { height: 100% !important; }
+.plm-table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.3; margin-bottom: .6rem; }
+.plm-table th { text-align: left; font-weight: 600; color: #52514e; border-bottom: 1px solid #c3c2b7; padding: 4px 8px 4px 0; }
+.plm-table td { border-bottom: 1px solid #e1e0d9; padding: 4px 8px 4px 0; vertical-align: top; }
+.plm-table td.num, .plm-table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ia-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 12px; margin-bottom: .6rem; }
+.ia-card { border: 1px solid #e1e0d9; border-radius: 8px; padding: 10px 12px; background: #fff; }
+.ia-card h5 { font-size: .95rem; font-weight: 600; margin: 0 0 6px; padding: 0; color: #0b0b0b; }
+.ia-group { margin-bottom: 9px; }
+.ia-group:last-child { margin-bottom: 0; }
+.ia-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: .8rem; color: #52514e; margin-bottom: 2px; }
+.ia-delta { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ia-delta.good { color: #0a7f0a; }
+.ia-delta.bad { color: #b52f2f; }
+.ia-delta.neutral { color: #52514e; }
+.ia-delta.same { color: #6c6b66; font-weight: 400; }
+.ia-row { display: grid; grid-template-columns: 62px minmax(0, 1fr) 86px; align-items: center; gap: 6px; font-size: .76rem; color: #52514e; line-height: 1.25rem; }
+.ia-track { display: block; height: 12px; background: #f2f1ed; border-radius: 3px; overflow: hidden; }
+.ia-track i { display: block; height: 100%; border-radius: 3px; }
+.ia-val { text-align: right; color: #0b0b0b; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ia-foot { font-size: .78rem; color: #52514e; margin-top: 6px; }
 [data-testid="stMetric"] { background: #f7f7f4; border-radius: 8px; padding: 8px 12px; }
 [data-testid="stMetricValue"] { font-size: 1.18rem; font-weight: 600; line-height: 1.25; height: auto; }
 [data-testid="stMetricValue"] * { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
@@ -84,6 +111,16 @@ def verdict(text, good):
 def key_values(rows):
     items = "".join(f"<dt>{escape(str(k))}</dt><dd>{v}</dd>" for k, v in rows)
     html(f'<dl class="plm-kv">{items}</dl>')
+
+
+def table(headers, rows, numeric=()):
+    """Petit tableau dont le texte passe à la ligne, pour les barèmes. Les cellules sont du texte, échappé ici."""
+    def cell(tag, index, value):
+        return f'<{tag} class="num">{escape(str(value))}</{tag}>' if index in numeric else f"<{tag}>{escape(str(value))}</{tag}>"
+
+    head = "".join(cell("th", i, h) for i, h in enumerate(headers))
+    body = "".join("<tr>" + "".join(cell("td", i, v) for i, v in enumerate(row)) + "</tr>" for row in rows)
+    st.html(f'<table class="plm-table"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>')
 
 
 def legend(colors):

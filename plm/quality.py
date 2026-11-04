@@ -1,4 +1,9 @@
-"""Contrôles de qualité des données : données manquantes, incohérences, risques d'approvisionnement."""
+"""Contrôles de qualité des données.
+
+La vue Contrôle des données présente deux familles : les champs manquants ou vides du XML, et la cohérence
+de maturité entre parent et enfant. Les autres constats (approvisionnement, cycle de vie, nommage, structure)
+restent affichés sur la fiche de chaque pièce.
+"""
 import re
 
 from plm.model import MATURITY_RANK
@@ -7,12 +12,14 @@ BLOCKING = "Bloquant"
 WARNING = "Attention"
 INFO = "Info"
 
-MISSING = "Données manquantes"
+MISSING = "Données manquantes ou vides"
+PARENT_CHILD = "Cohérence parent-enfant"
 INCONSISTENT = "Incohérence"
 SUPPLY = "Approvisionnement"
 STRUCTURE = "Structure"
 NAMING = "Nommage"
 
+CONTROL_DOMAINS = (MISSING, PARENT_CHILD)
 SEVERITY_RANK = {BLOCKING: 0, WARNING: 1, INFO: 2}
 SEVERITY_ICONS = {BLOCKING: "🔴", WARNING: "🟠", INFO: "🔵"}
 
@@ -28,54 +35,91 @@ PARSER_RULES = {
 }
 
 
-def finding(rule, severity, domain, product, message):
-    return {"rule": rule, "severity": severity, "domain": domain, "product_id": product["xml_id"], "name": product["name"], "message": message}
+def finding(rule, severity, domain, product, message, element=None, field=None):
+    return {"rule": rule, "severity": severity, "domain": domain, "product_id": product["xml_id"], "name": product["name"], "message": message, "element": element, "field": field}
 
 
-def check_parser_warnings(model):
-    found = []
-    for product in model.products.values():
-        # Une enveloppe EI et sa pièce 3D forment une seule ligne : pas de doublon d'alerte.
-        part = model.products[product["children"][0]["product"]] if product["kind"] == "wrapper" else None
-        part_codes = {w["code"] for w in part["warnings"]} if part else set()
-        for warning in product["warnings"]:
-            if warning["code"] in part_codes:
+def is_control(found):
+    return found["domain"] in CONTROL_DOMAINS
+
+
+def control_findings(findings):
+    return [f for f in findings if is_control(f)]
+
+
+def filled(value):
+    return value not in (None, "", [])
+
+
+def field_completeness(model):
+    """Taux de remplissage de chaque champ, par type d'objet du XML."""
+    products = list(model.products.values())
+    reps = [p["rep_3d"] for p in model.parts if p.get("rep_3d")]
+
+    def key(name):
+        return lambda item: item.get(name)
+
+    def priced(part):
+        return any("unit_price_eur" in link for link in model.active_links(part)) or None
+
+    def complete_history(part):
+        return len(part["revisions"]) == part["revision_index"] or None
+
+    groups = [
+        ("Pièces 3D", model.parts, [("Nom", key("name")), ("ID PLM", key("plm_id")), ("Description", key("description")), ("Révision", key("revision")), ("Maturité", key("maturity")),
+                                    ("Cycle de vie", key("lifecycle")), ("Masse", key("mass_kg")), ("Matériau", key("material")), ("Propriétaire", key("owner")),
+                                    ("Date de création", key("created")), ("Date de modification", key("modified")), ("Représentation 3D", key("rep_3d"))]),
+        ("Engineering Items", [p for p in products if p["kind"] == "wrapper"], [("Nom", key("name")), ("ID PLM", key("plm_id")), ("Description", key("description")), ("Révision", key("revision")),
+                                                                                ("Maturité", key("maturity")), ("Masse", key("mass_kg")), ("Matériau", key("material"))]),
+        ("Assemblages", [p for p in products if p["kind"] == "assembly"], [("Nom", key("name")), ("ID PLM", key("plm_id")), ("Description", key("description")), ("Révision", key("revision")),
+                                                                           ("Maturité", key("maturity")), ("Masse", key("mass_kg"))]),
+        ("Instances", model.instances, [("ID", key("plm_id")), ("Nom", key("name")), ("Description", key("description"))]),
+        ("Représentations 3D", reps, [("Nom", key("name")), ("ID PLM", key("plm_id")), ("Description", key("description"))]),
+        ("Pièces physiques, extension", model.physical_parts, [("Fournisseur", key("sourcing")), ("Prix fournisseur", priced), ("Historique de révision complet", complete_history), ("Matière consommée", key("usage_kg"))]),
+    ]
+    rows = []
+    for group, items, fields in groups:
+        for name, getter in fields:
+            count = sum(1 for item in items if filled(getter(item)))
+            rows.append({"object": group, "field": name, "filled": count, "total": len(items), "rate": count / len(items) if items else 1.0})
+    return rows
+
+
+def parent_child_links(model):
+    """Compare la maturité de chaque parent à celle de ses enfants directs, tels que déclarés dans le XML."""
+    checked = 0
+    issues = []
+    for parent in model.products.values():
+        for reference in parent["children"]:
+            child = model.products[reference["product"]]
+            checked += 1
+            parent_rank, child_rank = MATURITY_RANK[parent["maturity"]], MATURITY_RANK[child["maturity"]]
+            names = parent["display_name"], child["display_name"]
+            if child["maturity"] == "OBSOLETE" and parent["maturity"] != "OBSOLETE":
+                rule, problem = "obsolete_in_bom", "Enfant obsolète encore utilisé"
+                message = f"{names[0]} ({parent['maturity']}) utilise encore {names[1]}, OBSOLETE, {reference['quantity']} fois."
+            elif parent_rank >= MATURITY_RANK["FROZEN"] and child_rank < parent_rank:
+                if parent["kind"] == "wrapper":
+                    rule, problem = "ei_above_3d", "Engineering Item plus avancé que sa pièce 3D"
+                    message = f"L'Engineering Item {names[0]} est {parent['maturity']} alors que sa pièce 3D est {child['maturity']}."
+                    names = f"{names[0]} (Engineering Item)", f"{names[1]} (pièce 3D)"
+                else:
+                    rule, problem = "maturity_parent_above_child", "Parent plus avancé que son enfant"
+                    message = f"{names[0]} est {parent['maturity']} alors que son enfant {names[1]} est {child['maturity']}."
+            else:
                 continue
-            severity, domain = PARSER_RULES[warning["code"]]
-            found.append(finding(warning["code"], severity, domain, product, warning["message"]))
-    return found
+            issues.append({"parent_id": parent["xml_id"], "parent": names[0], "parent_maturity": parent["maturity"], "child_id": child["xml_id"], "child": names[1],
+                           "child_maturity": child["maturity"], "gap": max(parent_rank - child_rank, 0), "rule": rule, "problem": problem, "message": message})
+    return {"checked": checked, "issues": sorted(issues, key=lambda row: (-row["gap"], row["parent"]))}
 
 
-def check_maturity(model):
+def check_parent_child(model):
+    """Une alerte par lien incohérent : elle s'affiche sur la fiche de l'enfant comme sur celle du parent."""
     found = []
-    for node in model.nodes.values():
-        if not node.is_assembly:
-            continue
-        rank = MATURITY_RANK[node.product["maturity"]]
-        if rank < MATURITY_RANK["FROZEN"]:
-            continue
-        below = []
-        for leaf in node.leaves():
-            ranks = [leaf.product["maturity"]] + ([leaf.wrapper["maturity"]] if leaf.wrapper else [])
-            lowest = min(ranks, key=MATURITY_RANK.get)
-            if MATURITY_RANK[lowest] < rank:
-                below.append(f"{leaf.label} ({lowest})")
-        below = sorted(set(below))
-        if below:
-            shown = ", ".join(below[:6]) + (f" et {len(below) - 6} autres" if len(below) > 6 else "")
-            found.append(finding(
-                "maturity_parent_above_child", BLOCKING, INCONSISTENT, node.product,
-                f"{node.label} est {node.product['maturity']} alors que {len(below)} sous-composants sont moins matures : {shown}.",
-            ))
-
-    for product in model.products.values():
-        if product["kind"] == "wrapper":
-            part = model.products[product["children"][0]["product"]]
-            if MATURITY_RANK[product["maturity"]] > MATURITY_RANK[part["maturity"]]:
-                found.append(finding(
-                    "ei_above_3d", BLOCKING, INCONSISTENT, part,
-                    f"L'Engineering Item est {product['maturity']} alors que sa pièce 3D est {part['maturity']}.",
-                ))
+    for link in parent_child_links(model)["issues"]:
+        alert = finding(link["rule"], BLOCKING, PARENT_CHILD, model.products[link["child_id"]], link["message"])
+        alert["related"] = link["parent_id"]
+        found.append(alert)
     return found
 
 
@@ -83,9 +127,6 @@ def check_lifecycle(model):
     found = []
     for part in model.parts:
         maturity = part["maturity"]
-        if maturity == "OBSOLETE":
-            found.append(finding("obsolete_in_bom", BLOCKING, INCONSISTENT, part,
-                                 f"Pièce OBSOLETE encore utilisée {model.quantity(part['xml_id'])} fois dans la nomenclature."))
         if maturity == "PRIVATE" and not part.get("physical", True):
             found.append(finding("study_geometry", WARNING, STRUCTURE, part,
                                  "Géométrie d'étude en PRIVATE : à exclure de la nomenclature de production."))
@@ -99,23 +140,34 @@ def check_lifecycle(model):
 def check_missing_data(model):
     found = []
     for part in model.physical_parts:
-        part_id = part["xml_id"]
         if not part["sourcing"]:
-            found.append(finding("missing_supplier", BLOCKING, MISSING, part, "Aucun fournisseur désigné."))
+            found.append(finding("missing_supplier", BLOCKING, MISSING, part, "Aucun fournisseur désigné.", field="Fournisseur"))
         elif not any("unit_price_eur" in l for l in model.active_links(part)):
-            found.append(finding("missing_price", WARNING, MISSING, part, "Prix fournisseur non renseigné : le coût affiché est une estimation."))
+            found.append(finding("missing_price", WARNING, MISSING, part, "Prix fournisseur non renseigné : le coût affiché est une estimation.", field="Prix fournisseur"))
         if not part["material"]:
-            found.append(finding("missing_material", BLOCKING, MISSING, part, "Matériau non renseigné."))
+            found.append(finding("missing_material", BLOCKING, MISSING, part, "Matériau non renseigné.", field="Matériau"))
         if not part["mass_kg"]:
-            found.append(finding("missing_mass", BLOCKING, MISSING, part, "Masse non renseignée."))
+            found.append(finding("missing_mass", BLOCKING, MISSING, part, "Masse non renseignée.", field="Masse"))
         if not part["description"]:
-            found.append(finding("missing_description", INFO, MISSING, part, "Description non renseignée."))
+            found.append(finding("missing_description", INFO, MISSING, part, "Description vide.", field="Description"))
         if len(part["revisions"]) != part["revision_index"]:
             found.append(finding("missing_history", WARNING, MISSING, part,
-                                 f"Historique incomplet : {len(part['revisions'])} révisions tracées pour la révision {part['revision']}."))
+                                 f"Historique incomplet : {len(part['revisions'])} révisions tracées pour la révision {part['revision']}.", field="Historique"))
     for product in model.products.values():
         if product["kind"] == "assembly" and not product["description"]:
-            found.append(finding("missing_description", INFO, MISSING, product, "Description non renseignée."))
+            found.append(finding("missing_description", INFO, MISSING, product, "Description vide.", field="Description"))
+
+    # Un champ vide sur tout un type d'objet donne une seule alerte, pas une par objet.
+    for row in field_completeness(model):
+        if row["object"] in ("Engineering Items", "Instances", "Représentations 3D") and row["filled"] < row["total"]:
+            empty = row["total"] - row["filled"]
+            found.append(finding("empty_field_group", INFO, MISSING, model.tree.product,
+                                 f"Champ {row['field']} vide sur {empty} objets sur {row['total']}.", element=row["object"], field=row["field"]))
+
+    organizations = {p["organization"] for p in model.products.values()}
+    if organizations == {"Company Name"}:
+        found.append(finding("placeholder_metadata", INFO, MISSING, model.tree.product,
+                             "Valeur générique « Company Name » sur tous les produits.", element="Tous les produits", field="Organisation"))
     return found
 
 
@@ -164,15 +216,25 @@ def check_structure(model):
     if not re.search(r"rotor|magnet|aimant", names):
         found.append(finding("structure_gap", WARNING, STRUCTURE, emotor.product,
                              "Aucun rotor ni aimant dans la nomenclature du moteur : export partiel ou structure incomplète. Masse, coût et risques terres rares ne sont pas couverts."))
-    organizations = {p["organization"] for p in model.products.values()}
-    if organizations == {"Company Name"}:
-        found.append(finding("placeholder_metadata", INFO, MISSING, model.tree.product,
-                             "Organisation à la valeur générique « Company Name » sur tous les produits."))
+    return found
+
+
+def check_parser_warnings(model):
+    found = []
+    for product in model.products.values():
+        # Une enveloppe EI et sa pièce 3D forment une seule ligne : pas de doublon d'alerte.
+        part = model.products[product["children"][0]["product"]] if product["kind"] == "wrapper" else None
+        part_codes = {w["code"] for w in part["warnings"]} if part else set()
+        for warning in product["warnings"]:
+            if warning["code"] in part_codes:
+                continue
+            severity, domain = PARSER_RULES[warning["code"]]
+            found.append(finding(warning["code"], severity, domain, product, warning["message"]))
     return found
 
 
 def run_checks(model):
-    found = (check_maturity(model) + check_lifecycle(model) + check_missing_data(model) + check_supply(model)
+    found = (check_parent_child(model) + check_missing_data(model) + check_lifecycle(model) + check_supply(model)
              + check_structure(model) + check_parser_warnings(model))
     return sorted(found, key=lambda f: (SEVERITY_RANK[f["severity"]], f["domain"], f["name"]))
 
