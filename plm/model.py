@@ -12,6 +12,8 @@ from plm_parser import parse_plm
 
 DATA_XML = Path(__file__).resolve().parent.parent / "data" / "XPDMXML_ECAR_PLM_ENRICHED.xml"
 
+COMPLEXITY_LEVELS = (("Très élevée", 75), ("Élevée", 55), ("Moyenne", 30), ("Simple", 0))
+OPERATIONS_CEILING = 15
 MATURITY_RANK = {"OBSOLETE": -1, "PRIVATE": 0, "IN_WORK": 1, "FROZEN": 2, "RELEASED": 3}
 QUALIFIED = ("APPROVED", "CONDITIONAL")
 QUALIFICATION_LABELS = {
@@ -270,6 +272,12 @@ class PlmModel:
 
     def primary_link(self, part):
         return max(self.active_links(part), key=lambda l: l["share_pct"], default=None)
+
+    def complexity(self, part):
+        """Complexité de fabrication sur 100 : procédé 40, précision 30, nombre d'opérations 30."""
+        score = round(40 * (part["process_rating"] - 1) / 4 + 30 * (part["precision_rating"] - 1) / 4 + 30 * min(part["operations"] / OPERATIONS_CEILING, 1))
+        level = next(name for name, threshold in COMPLEXITY_LEVELS if score >= threshold)
+        return {"score": score, "level": level, "process": part["process"], "process_rating": part["process_rating"], "precision_rating": part["precision_rating"], "operations": part["operations"]}
 
     def is_single_source(self, part):
         return len(self.qualified_links(part)) <= 1

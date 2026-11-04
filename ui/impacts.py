@@ -332,7 +332,7 @@ def render_mass(model, detail):
     columns[1].metric("Surcoût par e-drive", signed_eur(detail["delta_cost_unit"], 2))
     columns[2].metric("Coût unique", compact_eur(detail["one_off"]), help="Outillage et requalification.")
     columns[3].metric("Délai maximal", f"{detail['max_weeks']} semaines", help=f"{number(model.weeks_to_sop)} semaines avant le démarrage série.")
-    columns[4].metric("CO2 matière", f"{signed(detail['delta_co2'])} kg CO2e", help="Écart par e-drive, facteurs d'émission simulés.")
+    columns[4].metric("CO2 matière", f"{signed(detail['delta_co2'])} kg CO2e", help="Écart par e-drive.")
     if detail["chosen"]:
         st.dataframe([{"Pièce": o["part"], "Option": o["label"], "Gain (kg)": round(-o["delta_mass"], 3), "Surcoût (€)": round(o["delta_cost"], 2), "Faisabilité": o["feasibility_label"], "Délai (semaines)": o["weeks"], "Risque": o["risk"]} for o in detail["chosen"]], hide_index=True, width="stretch",
                      column_config={"Gain (kg)": st.column_config.NumberColumn(format="localized"), "Surcoût (€)": st.column_config.NumberColumn(format="localized")})
@@ -367,7 +367,7 @@ def render_method():
             "**Score du produit** : moyenne pondérée par la classe de la pièce (A compte 3 fois, B 2 fois, C 1 fois). "
             "Le score des pièces touchées fait la même moyenne sur les seules pièces modifiées.\n\n"
             "**Hypothèses** : la rupture montre l'état pendant l'arrêt, le changement de fournisseur l'état une fois qualifié, "
-            "le prix l'effet à plein régime sans délai contractuel. Toutes les valeurs de coût et de fournisseur sont simulées."
+            "le prix l'effet à plein régime sans délai contractuel."
         )
 
 

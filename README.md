@@ -45,9 +45,9 @@ Pour changer une hypothèse : modifiez `enrich_xml.py`, lancez `python enrich_xm
 
 **Déduit du XML d'origine :** les couples d'engrenages et les roulements coaxiaux. Les entraxes calculés à partir des positions tombent exactement sur 100,0 mm et 154,0 mm. Attention, `Rotation3D` se lit par colonnes.
 
-**Simulé dans l'extension `ext:Enrichment` :** coûts, fournisseurs, PPAP, contrats, maturités, dates, propriétaires, historiques de révision, interfaces non déduites des positions, options d'allègement, paramètres du programme.
+**Simulé dans l'extension `ext:Enrichment` :** coûts, fournisseurs, PPAP, contrats, maturités, dates, propriétaires, historiques de révision, interfaces non déduites des positions, complexité de fabrication, options d'allègement, paramètres du programme.
 
-Les fournisseurs et les événements sont **fictifs**. Toute ressemblance avec une société existante serait fortuite. L'application rappelle l'origine de chaque donnée.
+Les fournisseurs et les événements sont **fictifs**. Toute ressemblance avec une société existante serait fortuite. L'application n'affiche pas ces mentions : cette section et `enrich_xml.py` font référence.
 
 ## Bases des prix
 
@@ -63,5 +63,5 @@ Les fournisseurs et les événements sont **fictifs**. Toute ressemblance avec u
 - L'export ne contient pas la géométrie 3D : les positions sont réelles, mais chaque point est l'origine d'une pièce.
 - Les scénarios de rupture et de prix sont calculés à cadence série, alors que le démarrage série n'a lieu qu'en septembre 2027.
 - Le plan d'allègement est une heuristique : options triées par coût du kg gagné, une option par pièce.
-- Les scores de risque et de qualité sont des indicateurs de travail, à calibrer avec des experts : leurs barèmes sont affichés dans l'application.
+- Les scores de risque, de complexité et de qualité sont des indicateurs de travail, à calibrer avec des experts : leurs barèmes sont affichés dans l'application.
 - L'analyse d'impacts montre un état : la rupture pendant l'arrêt, le changement de fournisseur une fois qualifié, le prix à plein régime.

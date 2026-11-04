@@ -89,12 +89,12 @@ def part_details(model, part):
             "material": product["material"],
             "unit_cost_eur": rounded(unit_cost),
             "cost_kind": cost_kind,
-            "envelope_mm": product.get("envelope_mm"),
+            **({"complexity": model.complexity(product)} if product.get("physical", True) else {}),
             "volume_l": rounded(model.volume_litres(product) or 0, 3),
             "positions_mm": model.positions.get(part_id, [])[:4],
             "suppliers": [{"id": l["supplier"], "name": model.suppliers[l["supplier"]]["name"], "country": model.suppliers[l["supplier"]]["country_name"], "share_pct": l["share_pct"],
                            "price_eur": l.get("unit_price_eur"), "lead_time_days": l["lead_time_days"], "status": QUALIFICATION_LABELS[l["qualification"]]} for l in product["sourcing"]],
-            "interfaces": [{"with": model.node_label(i["other"]), "type": model.interface_types[i["type"]]["label"], "note": i["note"], "evidence": i["evidence"]} for i in model.interfaces(part_id)],
+            "interfaces": [{"with": model.node_label(i["other"]), "type": model.interface_types[i["type"]]["label"], "note": i["note"]} for i in model.interfaces(part_id)],
         })
     sources = [model.source_ref(product, "identité, structure, masse, maturité, historique")]
     sources += [model.supplier_ref(l["supplier"], "prix, délai, PPAP") for l in product["sourcing"]]
@@ -140,7 +140,7 @@ def data_alerts(model, severity=None, domain=None, part=None, limit=25):
 def critical_parts(model, top=10):
     rows = scenarios.criticality(model)
     selected = rows[:top]
-    fields = ("name", "plm_id", "score", "level", "level_reason", "reasons", "breakdown", "sources_qualified", "sources_referenced", "origin", "interfaces", "mass_kg", "line_cost", "cost_share", "quantity")
+    fields = ("name", "plm_id", "score", "level", "level_reason", "reasons", "breakdown", "complexity", "complexity_level", "sources_qualified", "sources_referenced", "origin", "interfaces", "mass_kg", "line_cost", "cost_share", "quantity")
     return {
         "levels": {level: sum(r["level"] == level for r in rows) for level, _ in scenarios.LEVELS},
         "rule": "Score sur 100 : sources, délai de remplacement, délai, origine, santé financière, classe fonctionnelle, interdépendances, poids dans le coût. Une pièce de classe A ou B avec un seul fournisseur qualifié est critique.",
@@ -275,7 +275,6 @@ def indicators(model):
     kpis = scenarios.product_kpis(model)
     return {**{k: rounded(v, 3) for k, v in kpis.items()},
             "program": {k: model.program[k] for k in ("annual_volume", "sop_date", "release_gate_date", "mass_target_kg")},
-            "data_origin": "Structure, masses, matériaux, révisions et positions : XML d'origine. Coûts, fournisseurs, maturités, dates, historique, interfaces : données simulées.",
             "sources": [model.source_ref(model.tree.product, "structure, masse")]}
 
 

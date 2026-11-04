@@ -21,9 +21,9 @@ SYSTEM_PROMPT = """Tu es l'assistant PLM d'un équipementier qui fournit un e-dr
 
 Règles :
 - Toute valeur chiffrée, tout nom de pièce ou de fournisseur doit venir d'un outil. N'invente rien, et appelle les outils utiles avant de répondre.
-- Pour une question de scénario (rupture, prix matière, changement de fournisseur, release, masse), utilise l'outil de simulation correspondant plutôt que de raisonner de tête.
+- Pour une question de scénario (rupture, prix matière, changement de fournisseur, release, masse), utilise l'outil de calcul correspondant plutôt que de raisonner de tête.
 - Cite les éléments utilisés avec leur ID PLM (prd-...) ou leur ID fournisseur (SUP-...).
-- Distingue les données : la structure, les masses, les matériaux, les révisions courantes et les positions viennent du XML d'origine ; les coûts, fournisseurs, maturités, dates, historiques, interfaces et options d'allègement sont simulés. Fournisseurs et événements sont fictifs. Dis-le quand une conclusion en dépend.
+- N'indique pas de toi-même la provenance des données. Si l'utilisateur la demande, réponds franchement : la structure, les masses, les matériaux, les révisions courantes et les positions viennent de l'export de l'OEM ; les coûts, fournisseurs, maturités, dates, historiques, interfaces, complexités et options d'allègement sont des hypothèses de travail, et les fournisseurs et événements sont fictifs.
 - Si une donnée manque ou si plusieurs pièces portent le même nom (GEAR WHEEL), dis-le plutôt que de deviner.
 
 Style : réponds en français, en commençant par la conclusion ou la décision à prendre, puis 2 à 5 puces courtes avec les chiffres clés. Pas plus de 150 mots, sauf si on te demande le détail. Montants en euros."""
@@ -120,7 +120,7 @@ def build_claude_tools(model, recorder, on_tool):
             semaines: Durée de l'arrêt du fournisseur en semaines.
             fournisseur: Fournisseur à l'arrêt. Par défaut le fournisseur principal.
         """
-        return run("Simulation de rupture", tools.supply_disruption, part=piece, supplier=fournisseur, weeks=semaines)
+        return run("Calcul de la rupture", tools.supply_disruption, part=piece, supplier=fournisseur, weeks=semaines)
 
     @beta_tool
     def simuler_prix_matiere(matiere: str, variation_pct: float) -> str:
@@ -130,7 +130,7 @@ def build_claude_tools(model, recorder, on_tool):
             matiere: Famille (cuivre, aluminium, acier électrique, acier, fonte, polymère) ou nom exact du matériau.
             variation_pct: Variation de l'indice en pourcentage, négative pour une baisse.
         """
-        return run("Simulation de prix matière", tools.material_price, material=matiere, pct=variation_pct)
+        return run("Calcul du prix matière", tools.material_price, material=matiere, pct=variation_pct)
 
     @beta_tool
     def cartographie_fournisseurs(fournisseur: str | None = None) -> str:
@@ -148,7 +148,7 @@ def build_claude_tools(model, recorder, on_tool):
         Args:
             fournisseur: Nom ou ID du fournisseur.
         """
-        return run("Simulation de défaillance", tools.supplier_exit, supplier=fournisseur)
+        return run("Calcul de la défaillance", tools.supplier_exit, supplier=fournisseur)
 
     @beta_tool
     def simuler_changement_fournisseur(piece: str, fournisseur: str, part_pct: int = 100) -> str:
@@ -159,7 +159,7 @@ def build_claude_tools(model, recorder, on_tool):
             fournisseur: Nouveau fournisseur, déjà référencé sur cette pièce.
             part_pct: Part du volume confiée au nouveau fournisseur.
         """
-        return run("Simulation de changement", tools.supplier_switch, part=piece, supplier=fournisseur, share_pct=part_pct)
+        return run("Calcul du changement", tools.supplier_switch, part=piece, supplier=fournisseur, share_pct=part_pct)
 
     @beta_tool
     def verifier_release(maturite_cible: str = "RELEASED") -> str:

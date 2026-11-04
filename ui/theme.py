@@ -11,6 +11,8 @@ PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6
 # Maturité : échelle ordonnée à une seule teinte, plus sombre quand la pièce est plus avancée.
 MATURITY_COLORS = {"PRIVATE": "#b7d3f6", "IN_WORK": "#3987e5", "FROZEN": "#1c5cab", "RELEASED": "#0d366b", "OBSOLETE": "#d03b3b"}
 STATUS_COLORS = {"Prêt": "#0ca30c", "À promouvoir": "#fab219", "En retard": "#ec835a", "Bloquant": "#d03b3b", "À exclure": "#c3c2b7"}
+# Complexité : échelle ordonnée à une seule teinte, plus sombre quand la pièce est plus complexe.
+COMPLEXITY_COLORS = {"Très élevée": "#0d366b", "Élevée": "#1c5cab", "Moyenne": "#3987e5", "Simple": "#b7d3f6"}
 LEVEL_COLORS = {"Critique": "#d03b3b", "Élevé": "#ec835a", "Modéré": "#fab219", "Faible": "#0ca30c"}
 INK = "#0b0b0b"
 INK2 = "#52514e"
@@ -60,7 +62,6 @@ CSS = """
 .st-key-main_tab > div > [data-baseweb="tab-list"] button p, .st-key-main_tab [role="tablist"]:first-of-type button p { font-size: 1.05rem; font-weight: 600; }
 .plm-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: .2rem; }
 .plm-header h1 { font-size: 1.45rem; font-weight: 700; margin: 0; padding: 0; }
-.plm-header span { color: #52514e; font-size: .85rem; }
 .plm-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 .5rem; }
 .plm-badge { display: inline-block; font-size: .74rem; line-height: 1.2rem; padding: 0 7px; border-radius: 4px; background: #f0efec; color: #0b0b0b; white-space: nowrap; }
 .plm-alert { display: flex; gap: 8px; padding: 6px 10px; border-radius: 6px; background: #f7f7f4; margin-bottom: 5px; font-size: .86rem; line-height: 1.3; }
@@ -73,7 +74,6 @@ CSS = """
 .plm-kv { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); gap: 3px 10px; font-size: .88rem; margin-bottom: .5rem; }
 .plm-kv dt { color: #6c6b66; margin: 0; }
 .plm-kv dd { margin: 0; overflow-wrap: anywhere; }
-.plm-origin { font-size: .72rem; color: #6c6b66; }
 .plm-source { font-size: .78rem; line-height: 1.3; margin-bottom: 4px; }
 .plm-source code { font-size: .72rem; }
 </style>
@@ -187,4 +187,4 @@ def sources_expander(model, sources, label="Sources PLM utilisées"):
     with st.expander(f"{label} ({len(unique)})"):
         rows = [{"Type": s["type"], "Élément": s["label"], "ID PLM": s["plm_id"], "ID XML / fournisseur": s["id"], "Champs utilisés": s.get("fields", "")} for s in unique.values()]
         st.dataframe(rows, hide_index=True, width="stretch")
-        st.caption(f"Fichier : {model.data['source_file']}. Structure, masses, matériaux, révisions courantes et positions viennent de l'export d'origine ; le reste est simulé.")
+        st.caption(f"Fichier : {model.data['source_file']}.")

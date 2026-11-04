@@ -7,8 +7,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from plm import scenarios
-from plm.fmt import compact_eur, eur, kg, number, pct
-from plm.model import CLAUSE_LABELS, FAMILIES, QUALIFICATION_LABELS, normalize
+from plm.fmt import eur, kg, number, pct
+from plm.model import FAMILIES, normalize
 from plm.quality import INFO, MISSING, PARENT_CHILD, SEVERITY_ICONS, SEVERITY_RANK, control_findings, counts, field_completeness, parent_child_links
 from ui import theme
 from ui.state import EXPLORER_TREE, close_detail, open_from_table, select_node, selected_id
@@ -18,8 +18,6 @@ plm_tree = components.declare_component("plm_tree", path=str(COMPONENT_DIR))
 
 TABS = [EXPLORER_TREE, "Nomenclature", "Contrôle des données", "Répartition et espace"]
 MATURITIES = ["PRIVATE", "IN_WORK", "FROZEN", "RELEASED", "OBSOLETE"]
-ORIGIN_XML = '<span class="plm-origin">XML d\'origine</span>'
-ORIGIN_SIM = '<span class="plm-origin">simulé</span>'
 TREE_HEIGHT = 700
 
 
@@ -63,11 +61,11 @@ def render_kpis(model):
     columns = st.columns(7)
     columns[0].metric("Masse totale", kg(round(kpis["mass_kg"], 2)), help="Somme des pièces de la nomenclature, identique à la masse déclarée sur le produit.")
     columns[1].metric("Pièces / références", f"{kpis['pieces']} / {kpis['references']}")
-    columns[2].metric("Coût nomenclature", eur(kpis["bom_cost"]), help="Coût simulé par e-drive, moyenne des prix fournisseurs pondérée par les parts de volume.")
+    columns[2].metric("Coût nomenclature", eur(kpis["bom_cost"]), help="Coût par e-drive, moyenne des prix fournisseurs pondérée par les parts de volume.")
     columns[3].metric("Fournisseurs actifs", f"{kpis['suppliers_active']} ({kpis['countries']} pays)")
     columns[4].metric("Pièces mono-source", kpis["single_source_parts"], help="Pièces avec au plus un fournisseur qualifié.")
     columns[5].metric("Alertes bloquantes", alerts["Bloquant"], help=f"Données manquantes et cohérence parent-enfant. {alerts['Attention']} point d'attention et {alerts['Info']} informations en plus.")
-    columns[6].metric("Encombrement (mm)", f"{box[0]}×{box[1]}×{box[2]}", help="Boîte englobante des origines d'instances du XML : ordre de grandeur, la géométrie 3D n'est pas dans l'export.")
+    columns[6].metric("Encombrement (mm)", f"{box[0]}×{box[1]}×{box[2]}", help="Boîte englobante des positions des pièces : ordre de grandeur.")
 
 
 # ------------------------------------------------------------------ Fiche
@@ -133,16 +131,8 @@ def render_relations(model, node):
     real = model.real_interfaces(node.part_id)
     st.markdown(f"**Interdépendances** : {len(real)} interface(s) fonctionnelle(s)")
     if interfaces:
-        rows = [{"Avec": model.node_label(i["other"]), "Type": model.interface_types[i["type"]]["label"], "Description": i["note"], "Justification": i["evidence"]} for i in interfaces]
+        rows = [{"Avec": model.node_label(i["other"]), "Type": model.interface_types[i["type"]]["label"], "Description": i["note"]} for i in interfaces]
         st.dataframe(rows, hide_index=True, width="stretch")
-
-    tests = model.revalidation_tests(node.part_id)
-    if tests:
-        st.markdown("**Si cette pièce change**")
-        chains = len({step.id for occurrence in occurrences for step in occurrence.path()[:-1]})
-        st.markdown(f"{chains} assemblage(s) à réviser et {len(tests)} essai(s) à refaire, jusqu'à {max(t['weeks'] for t in tests)} semaines pour {eur(sum(t['cost_eur'] for t in tests))} (hypothèse).")
-        st.dataframe([{"Essai": t["test"], "Interface": t["label"], "Durée (semaines)": t["weeks"], "Coût (€)": t["cost_eur"]} for t in tests], hide_index=True, width="stretch",
-                     column_config={"Coût (€)": st.column_config.NumberColumn(format="localized")})
 
 
 def select_child(key, ids):
@@ -156,16 +146,16 @@ def select_child(key, ids):
 
 def render_suppliers(model, node):
     part = node.product
+
+    def columns(link):
+        supplier = model.suppliers[link["supplier"]]
+        return {"Fournisseur": supplier["name"], "Origine": f"{supplier['city']}, {supplier['country_name']}", "Part": link["share_pct"] / 100, "Prix (€)": link.get("unit_price_eur"), "Notation": supplier["financial_rating"]}
+
+    config = {"Part": st.column_config.NumberColumn(format="percent"), "Prix (€)": st.column_config.NumberColumn(format="localized")}
     if node.is_assembly:
-        rows = []
-        for part_id in sorted({leaf.part_id for leaf in node.leaves()}):
-            product = model.products[part_id]
-            if not product.get("physical", True):
-                continue
-            for link in product["sourcing"]:
-                supplier = model.suppliers[link["supplier"]]
-                rows.append({"Pièce": model.node_label(part_id), "Fournisseur": supplier["name"], "Pays": supplier["country_name"], "Part": link["share_pct"] / 100, "Statut": QUALIFICATION_LABELS[link["qualification"]]})
-        st.dataframe(rows, hide_index=True, width="stretch", column_config={"Part": st.column_config.NumberColumn(format="percent")})
+        part_ids = sorted({leaf.part_id for leaf in node.leaves() if leaf.product.get("physical", True)})
+        rows = [{"Pièce": model.node_label(part_id), **columns(link)} for part_id in part_ids for link in model.products[part_id]["sourcing"]]
+        st.dataframe(rows, hide_index=True, width="stretch", column_config=config)
         return
     if not part.get("physical", True):
         st.info("Géométrie d'étude : pas de fournisseur attendu.")
@@ -178,63 +168,37 @@ def render_suppliers(model, node):
         st.warning(f"Pièce critique côté achats : {qualified} fournisseur qualifié sur {len(part['sourcing'])} référencé(s).")
     if part.get("sourcing_note"):
         st.caption(part["sourcing_note"])
-    rows = []
-    for link in sorted(part["sourcing"], key=lambda l: -l["share_pct"]):
-        supplier = model.suppliers[link["supplier"]]
-        rows.append({
-            "Fournisseur": supplier["name"],
-            "Origine": f"{supplier['city']}, {supplier['country_name']}",
-            "Part": link["share_pct"] / 100,
-            "Prix (€)": link.get("unit_price_eur"),
-            "Statut": QUALIFICATION_LABELS[link["qualification"]],
-            "PPAP": link.get("ppap_date", ""),
-            "Délai (j)": link["lead_time_days"],
-            "Transit (j)": link["transit_days"],
-            "Capacité / sem.": link["capacity_per_week"],
-            "Contrat": CLAUSE_LABELS[link["price_clause"]],
-            "Fin": link.get("contract_end", ""),
-            "Livraison à l'heure": supplier["otd_pct"] / 100,
-            "PPM": supplier["quality_ppm"],
-            "Notation": supplier["financial_rating"],
-        })
-    st.dataframe(rows, hide_index=True, width="stretch", column_config={
-        "Part": st.column_config.NumberColumn(format="percent"), "Livraison à l'heure": st.column_config.NumberColumn(format="percent"),
-        "Prix (€)": st.column_config.NumberColumn(format="localized")})
-    st.caption(f"Stock de sécurité : {part.get('safety_stock_days', 0)} jours ouvrés. Fournisseurs fictifs, valeurs simulées.")
+    st.dataframe([columns(link) for link in sorted(part["sourcing"], key=lambda l: -l["share_pct"])], hide_index=True, width="stretch", column_config=config)
+    st.caption(f"Stock de sécurité : {part.get('safety_stock_days', 0)} jours ouvrés.")
 
 
 def render_traceability(model, node):
     part = node.product
     rows = [
-        ("ID PLM", f"<code>{escape(part['plm_id'])}</code> {ORIGIN_XML}"),
-        ("ID XML", f"<code>{escape(part['xml_id'])}</code> {ORIGIN_XML}"),
-        ("Nom PLM", f"{escape(part['name'])} {ORIGIN_XML}"),
+        ("ID PLM", f"<code>{escape(part['plm_id'])}</code>"),
+        ("ID XML", f"<code>{escape(part['xml_id'])}</code>"),
+        ("Nom PLM", escape(part["name"])),
     ]
     if node.wrapper:
-        rows.append(("Engineering Item", f"{escape(node.wrapper['name'])} · <code>{escape(node.wrapper['plm_id'])}</code> · {escape(node.wrapper['maturity'])} {ORIGIN_XML}"))
+        rows.append(("Engineering Item", f"{escape(node.wrapper['name'])} · <code>{escape(node.wrapper['plm_id'])}</code> · {escape(node.wrapper['maturity'])}"))
     rows += [
-        ("Révision", f"{escape(part['revision'])} (indice {part['revision_index']}) {ORIGIN_XML}"),
-        ("Famille de révision", f"<code>{escape(part['revision_family'])}</code> {ORIGIN_XML}"),
-        ("Maturité", f"{escape(part['maturity'])} depuis le {escape(str(part.get('maturity_date', 'non renseigné')))} {ORIGIN_SIM}"),
-        ("Cycle de vie", f"<code>{escape(part['lifecycle'])}</code> {ORIGIN_XML}"),
-        ("Créé le", f"{escape(part['created'][:10])} {ORIGIN_SIM}"),
-        ("Modifié le", f"{escape(part['modified'][:10])} {ORIGIN_SIM}"),
-        ("Propriétaire", f"{escape(part['owner'])} {ORIGIN_SIM}"),
-        ("Projet", f"{escape(part['project'])} {ORIGIN_XML}"),
+        ("Révision", f"{escape(part['revision'])} (indice {part['revision_index']})"),
+        ("Famille de révision", f"<code>{escape(part['revision_family'])}</code>"),
+        ("Maturité", f"{escape(part['maturity'])} depuis le {escape(str(part.get('maturity_date', 'non renseigné')))}"),
+        ("Cycle de vie", f"<code>{escape(part['lifecycle'])}</code>"),
+        ("Créé le", escape(part["created"][:10])),
+        ("Modifié le", escape(part["modified"][:10])),
+        ("Propriétaire", escape(part["owner"])),
+        ("Projet", escape(part["project"])),
     ]
-    if part.get("rep_3d"):
-        rows.append(("Représentation 3D", f"{escape(part['rep_3d']['name'])} · <code>{escape(part['rep_3d']['plm_id'])}</code> {ORIGIN_XML}"))
     if part.get("sourcing"):
-        names = ", ".join(escape(model.suppliers[l["supplier"]]["name"]) for l in model.active_links(part))
-        rows.append(("Fournisseur(s)", f"{names} {ORIGIN_SIM}"))
-    if part.get("planned_release") and part["maturity"] != "RELEASED":
-        rows.append(("Release prévue", f"{escape(part['planned_release'])} · {escape(part.get('blocking', ''))} {ORIGIN_SIM}"))
+        rows.append(("Fournisseur(s)", ", ".join(escape(model.suppliers[l["supplier"]]["name"]) for l in model.active_links(part))))
     theme.key_values(rows)
 
     if not part["revisions"]:
         st.info("Historique de révision non renseigné.")
         return
-    st.markdown("**Suivi de versions** (historique simulé, seule la dernière révision est dans l'export d'origine)")
+    st.markdown("**Suivi de versions**")
     rows = []
     previous = None
     for revision in part["revisions"]:
@@ -298,29 +262,18 @@ def render_cost(model, node):
 
     material = model.material_of(part)
     unit_cost, kind = model.unit_cost(part)
-    rows = [("Matériau", f"{escape(part['material'] or 'Non renseigné')} {ORIGIN_XML}")]
+    rows = [("Matériau", escape(part["material"] or "Non renseigné"))]
     if material:
         rows.append(("Famille, densité", f"{escape(material['family'])}, {number(material['density_kg_dm3'], 2)} kg/dm³"))
-        rows.append(("Prix matière", f"{eur(material['price_eur_kg'], 2)}/kg · {escape(material['index'])} {ORIGIN_SIM}"))
-        rows.append(("Base du prix", f"{escape(material['price_basis'])}"))
+        rows.append(("Prix matière", f"{eur(material['price_eur_kg'], 2)}/kg · {escape(material['index'])}"))
     if part.get("usage_kg"):
-        rows.append(("Matière consommée", f"{kg(part['usage_kg'])} par pièce {ORIGIN_SIM}"))
-        rows.append(("Coût matière", f"{eur(model.material_cost(part), 2)} par pièce {ORIGIN_SIM}"))
-        rows.append(("Conversion", f"{eur(max(unit_cost - model.material_cost(part), 0), 2)} par pièce {ORIGIN_SIM}"))
-    rows.append(("Coût unitaire", f"{eur(unit_cost, 2)} ({escape(kind.lower())}) {ORIGIN_SIM}"))
-    rows.append(("Achats annuels", f"{compact_eur(model.annual_spend(part))} à 48 000 e-drives par an {ORIGIN_SIM}"))
+        rows.append(("Matière consommée", f"{kg(part['usage_kg'])} par pièce"))
+    rows.append(("Coût unitaire", f"{eur(unit_cost, 2)} ({escape(kind.lower())})"))
     if material and part.get("usage_kg"):
-        rows.append(("CO2 matière", f"{number(part['usage_kg'] * material['co2_kg_per_kg'] * model.quantity(node.part_id), 1)} kg CO2e par e-drive {ORIGIN_SIM}"))
+        rows.append(("CO2 matière", f"{number(part['usage_kg'] * material['co2_kg_per_kg'] * model.quantity(node.part_id), 1)} kg CO2e par e-drive"))
     volume = model.volume_litres(part)
     if volume:
         rows.append(("Volume matière", f"{number(volume * model.quantity(node.part_id), 2)} L (masse et densité)"))
-    if part.get("envelope_mm"):
-        rows.append(("Encombrement unitaire", f"{escape(part['envelope_mm'].replace('x', ' × '))} mm {ORIGIN_SIM}"))
-    positions = model.positions.get(node.part_id, [])
-    if positions:
-        shown = " ; ".join(f"({number(p[0])}, {number(p[1])}, {number(p[2])})" for p in positions[:3])
-        extra = f" et {len(positions) - 3} autres" if len(positions) > 3 else ""
-        rows.append(("Position (mm)", f"{shown}{extra} {ORIGIN_XML}"))
     theme.key_values(rows)
 
 
@@ -357,6 +310,9 @@ def render_detail(model, node):
         tags.append((part["material_family"], theme.FAMILY_COLORS[part["material_family"]]))
     if part.get("criticality") and not node.is_assembly:
         tags.append((f"Classe {part['criticality']}", None))
+    if not node.is_assembly and part.get("physical", True):
+        complexity = model.complexity(part)
+        tags.append((f"Complexité {complexity['level'].lower()}, {complexity['score']} sur 100", None))
     if not node.is_assembly and part.get("physical", True) and model.is_single_source(part):
         tags.append(("Mono-source", theme.LEVEL_COLORS["Critique"]))
     theme.badges(tags)
@@ -364,16 +320,16 @@ def render_detail(model, node):
     leaves = node.leaves()
     columns = st.columns(4)
     if node.is_assembly:
-        columns[0].metric("Masse", kg(round(node.total_mass, 3)), help="Masse déclarée dans le XML d'origine.")
+        columns[0].metric("Masse", kg(round(node.total_mass, 3)), help="Masse déclarée du composant.")
         columns[1].metric("Part du produit", pct(node.total_mass / model.tree.total_mass, 1))
         columns[2].metric("Pièces / références", f"{sum(l.abs_quantity for l in leaves)} / {len({l.part_id for l in leaves})}")
         columns[3].metric("Coût", eur(model.node_cost(node)))
     else:
         unit_cost = model.unit_cost(part)[0]
         several = node.abs_quantity > 1
-        columns[0].metric(f"Masse (× {node.abs_quantity})" if several else "Masse", kg(round(node.total_mass, 3)), help=f"{kg(part['mass_kg'])} par pièce, valeur du XML d'origine.")
+        columns[0].metric(f"Masse (× {node.abs_quantity})" if several else "Masse", kg(round(node.total_mass, 3)), help=f"{kg(part['mass_kg'])} par pièce.")
         columns[1].metric("Part du parent", pct(node.total_mass / node.parent.total_mass, 1) if node.parent else "100 %", help=f"Part de la masse de {node.parent.label}." if node.parent else None)
-        columns[2].metric(f"Coût (× {node.abs_quantity})" if several else "Coût", eur(unit_cost * node.abs_quantity, 2), help=f"{eur(unit_cost, 2)} par pièce, valeur simulée.")
+        columns[2].metric(f"Coût (× {node.abs_quantity})" if several else "Coût", eur(unit_cost * node.abs_quantity, 2), help=f"{eur(unit_cost, 2)} par pièce.")
         columns[3].metric("Interdépendances", len(model.real_interfaces(node.part_id)))
 
     render_alerts_block(model, node)
@@ -445,11 +401,9 @@ def render_bom_tab(model):
             "Rév.": part["revision"],
             "Maturité": part["maturity"],
             "Fournisseurs": len(part["sourcing"]),
-            "Qualifiés": len(model.qualified_links(part)),
             "Interfaces": len(model.real_interfaces(part_id)),
             "Criticité": crit["level"] if crit else "Hors périmètre",
             "Alertes": alerts["Bloquant"] + alerts["Attention"],
-            "ID PLM": part["plm_id"],
         })
         node_ids.append(node.id)
 
@@ -596,9 +550,9 @@ def render_spread_tab(model):
     with right:
         box = model.bounding_box()
         total_volume = sum((model.volume_litres(p) or 0) * model.quantity(p["xml_id"]) for p in model.parts)
-        st.markdown(f"**Vue spatiale** : origines des {sum(len(model.positions.get(p['xml_id'], [])) for p in model.parts)} instances du XML, avec les 3 axes du réducteur")
+        st.markdown(f"**Vue spatiale** : positions des {sum(len(model.positions.get(p['xml_id'], [])) for p in model.parts)} instances, avec les 3 axes du réducteur")
         theme.show(spatial_view(model), key="spatial")
-        st.caption(f"Boîte englobante {box[0]} × {box[1]} × {box[2]} mm, volume matière {number(total_volume, 1)} L. L'export ne contient pas la géométrie 3D (WithFiles=No) : seules les positions sont réelles, chaque point est l'origine d'une pièce.")
+        st.caption(f"Boîte englobante {box[0]} × {box[1]} × {box[2]} mm, volume matière {number(total_volume, 1)} L. Chaque point est la position d'une pièce.")
 
 
 def render(model):

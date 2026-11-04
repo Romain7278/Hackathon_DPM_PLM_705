@@ -2,7 +2,7 @@
 
 Conservé de l'export d'origine : structure, ID, noms, révisions courantes, masses, matériaux, positions.
 Simulé pour les scénarios : maturités, dates, propriétaires, descriptions manquantes et toute la
-section ext:Enrichment (coûts, fournisseurs, historique, interfaces, options d'allègement, scénarios).
+section ext:Enrichment (coûts, fournisseurs, historique, interfaces, complexité, options d'allègement, scénarios).
 Les fournisseurs et les événements sont fictifs ; les prix sont des hypothèses calées sur des cours publics.
 
 Usage : python enrich_xml.py
@@ -42,26 +42,26 @@ PROGRAM = {
 # Al et Cu : calés sur les cours publics d'octobre 2026 (prime Europe et conversion incluses).
 # Autres matières : hypothèses de travail, faute de cotation publique.
 MATERIALS = [
-    dict(id="MAT-ALSI9", plmName="Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)", family="Aluminium", densityKgDm3=2.71, priceEurKg=2.95, index="LME Aluminium + prime Europe", indexShare=0.90, co2KgPerKg=4.5, inBom="true", priceBasis="LME ~3 100 $/t (oct. 2026) + prime ~300 $/t, alliage de seconde fusion"),
-    dict(id="MAT-ALSI10", plmName="Aluminium alloy EN AC-AlSi10Mg (cast)", family="Aluminium", densityKgDm3=2.68, priceEurKg=3.45, index="LME Aluminium + prime Europe", indexShare=0.90, co2KgPerKg=11.0, inBom="true", priceBasis="LME ~3 100 $/t (oct. 2026) + prime ~300 $/t + prime d'alliage"),
-    dict(id="MAT-6082", plmName="Aluminium alloy EN AW-6082-T6", family="Aluminium", densityKgDm3=2.70, priceEurKg=3.50, index="LME Aluminium + prime billette", indexShare=0.85, co2KgPerKg=9.5, inBom="true", priceBasis="LME ~3 100 $/t (oct. 2026) + prime billette"),
-    dict(id="MAT-M235", plmName="Electrical steel M235-35A (laminated)", family="Acier électrique", densityKgDm3=7.60, priceEurKg=2.30, index="Acier électrique NO (contrat)", indexShare=0.85, co2KgPerKg=2.8, inBom="true", priceBasis="Hypothèse : pas de cotation publique européenne"),
-    dict(id="MAT-CU", plmName="Copper Cu-ETP (enamelled wire)", family="Cuivre", densityKgDm3=8.90, priceEurKg=15.00, index="LME Cuivre", indexShare=0.84, co2KgPerKg=4.2, inBom="true", priceBasis="LME 14 415 $/t (23/10/2026), soit 12,64 EUR/kg à 1,14 $/EUR, + conversion fil émaillé 2,36 EUR/kg"),
-    dict(id="MAT-20MNCR5", plmName="Case-hardening steel 20MnCr5", family="Acier", densityKgDm3=7.85, priceEurKg=1.30, index="Acier spécial (barres)", indexShare=0.80, co2KgPerKg=2.3, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-16MNCR5", plmName="Case-hardening steel 16MnCr5", family="Acier", densityKgDm3=7.85, priceEurKg=1.25, index="Acier spécial (barres)", indexShare=0.80, co2KgPerKg=2.3, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-42CRMO4", plmName="Alloy steel 42CrMo4 (quenched and tempered)", family="Acier", densityKgDm3=7.85, priceEurKg=1.50, index="Acier spécial (barres)", indexShare=0.80, co2KgPerKg=2.5, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-100CR6", plmName="Bearing steel 100Cr6 (AISI 52100)", family="Acier", densityKgDm3=7.81, priceEurKg=1.70, index="Acier à roulement", indexShare=0.75, co2KgPerKg=2.6, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-109", plmName="Steel class 10.9 (zinc-flake coated)", family="Acier", densityKgDm3=7.85, priceEurKg=1.40, index="Fil machine", indexShare=0.75, co2KgPerKg=2.4, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-S355", plmName="Structural steel S355J2", family="Acier", densityKgDm3=7.85, priceEurKg=0.85, index="Bobine laminée à chaud Europe", indexShare=0.85, co2KgPerKg=2.0, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-GJS600", plmName="Ductile cast iron EN-GJS-600-3", family="Fonte", densityKgDm3=7.10, priceEurKg=0.95, index="Ferrailles et fonte brute", indexShare=0.80, co2KgPerKg=1.6, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-PA66", plmName="Polyamide PA66-GF30", family="Polymère", densityKgDm3=1.36, priceEurKg=3.90, index="Compound PA66", indexShare=0.60, co2KgPerKg=6.5, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-FKM", plmName="FKM fluoroelastomer (steel-reinforced)", family="Polymère", densityKgDm3=1.85, priceEurKg=38.00, index="Compound FKM", indexShare=0.50, co2KgPerKg=20.0, inBom="true", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-AM60", plmName="Magnesium AM60B (HPDC)", family="Magnésium", densityKgDm3=1.79, priceEurKg=4.10, index="Magnésium (Chine)", indexShare=0.90, co2KgPerKg=28.0, inBom="false", priceBasis="Hypothèse : offre très concentrée en Chine"),
-    dict(id="MAT-AE44", plmName="Magnesium AE44 (HPDC)", family="Magnésium", densityKgDm3=1.82, priceEurKg=5.60, index="Magnésium (Chine)", indexShare=0.75, co2KgPerKg=28.0, inBom="false", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-AL1370", plmName="Aluminium wire EN AW-1370 (enamelled)", family="Aluminium", densityKgDm3=2.70, priceEurKg=5.80, index="LME Aluminium", indexShare=0.60, co2KgPerKg=9.5, inBom="false", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-NO20", plmName="Electrical steel NO20 (0.20 mm)", family="Acier électrique", densityKgDm3=7.65, priceEurKg=3.40, index="Acier électrique NO (contrat)", indexShare=0.80, co2KgPerKg=3.2, inBom="false", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-ADI", plmName="Austempered ductile iron ADI", family="Fonte", densityKgDm3=7.10, priceEurKg=1.35, index="Ferrailles et fonte brute", indexShare=0.60, co2KgPerKg=2.2, inBom="false", priceBasis="Hypothèse de travail"),
-    dict(id="MAT-6056", plmName="Aluminium alloy EN AW-6056 (fasteners)", family="Aluminium", densityKgDm3=2.72, priceEurKg=4.20, index="LME Aluminium", indexShare=0.70, co2KgPerKg=9.5, inBom="false", priceBasis="Hypothèse de travail"),
+    dict(id="MAT-ALSI9", plmName="Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)", family="Aluminium", densityKgDm3=2.71, priceEurKg=2.95, index="LME Aluminium + prime Europe", indexShare=0.90, co2KgPerKg=4.5, inBom="true"),
+    dict(id="MAT-ALSI10", plmName="Aluminium alloy EN AC-AlSi10Mg (cast)", family="Aluminium", densityKgDm3=2.68, priceEurKg=3.45, index="LME Aluminium + prime Europe", indexShare=0.90, co2KgPerKg=11.0, inBom="true"),
+    dict(id="MAT-6082", plmName="Aluminium alloy EN AW-6082-T6", family="Aluminium", densityKgDm3=2.70, priceEurKg=3.50, index="LME Aluminium + prime billette", indexShare=0.85, co2KgPerKg=9.5, inBom="true"),
+    dict(id="MAT-M235", plmName="Electrical steel M235-35A (laminated)", family="Acier électrique", densityKgDm3=7.60, priceEurKg=2.30, index="Acier électrique NO (contrat)", indexShare=0.85, co2KgPerKg=2.8, inBom="true"),
+    dict(id="MAT-CU", plmName="Copper Cu-ETP (enamelled wire)", family="Cuivre", densityKgDm3=8.90, priceEurKg=15.00, index="LME Cuivre", indexShare=0.84, co2KgPerKg=4.2, inBom="true"),
+    dict(id="MAT-20MNCR5", plmName="Case-hardening steel 20MnCr5", family="Acier", densityKgDm3=7.85, priceEurKg=1.30, index="Acier spécial (barres)", indexShare=0.80, co2KgPerKg=2.3, inBom="true"),
+    dict(id="MAT-16MNCR5", plmName="Case-hardening steel 16MnCr5", family="Acier", densityKgDm3=7.85, priceEurKg=1.25, index="Acier spécial (barres)", indexShare=0.80, co2KgPerKg=2.3, inBom="true"),
+    dict(id="MAT-42CRMO4", plmName="Alloy steel 42CrMo4 (quenched and tempered)", family="Acier", densityKgDm3=7.85, priceEurKg=1.50, index="Acier spécial (barres)", indexShare=0.80, co2KgPerKg=2.5, inBom="true"),
+    dict(id="MAT-100CR6", plmName="Bearing steel 100Cr6 (AISI 52100)", family="Acier", densityKgDm3=7.81, priceEurKg=1.70, index="Acier à roulement", indexShare=0.75, co2KgPerKg=2.6, inBom="true"),
+    dict(id="MAT-109", plmName="Steel class 10.9 (zinc-flake coated)", family="Acier", densityKgDm3=7.85, priceEurKg=1.40, index="Fil machine", indexShare=0.75, co2KgPerKg=2.4, inBom="true"),
+    dict(id="MAT-S355", plmName="Structural steel S355J2", family="Acier", densityKgDm3=7.85, priceEurKg=0.85, index="Bobine laminée à chaud Europe", indexShare=0.85, co2KgPerKg=2.0, inBom="true"),
+    dict(id="MAT-GJS600", plmName="Ductile cast iron EN-GJS-600-3", family="Fonte", densityKgDm3=7.10, priceEurKg=0.95, index="Ferrailles et fonte brute", indexShare=0.80, co2KgPerKg=1.6, inBom="true"),
+    dict(id="MAT-PA66", plmName="Polyamide PA66-GF30", family="Polymère", densityKgDm3=1.36, priceEurKg=3.90, index="Compound PA66", indexShare=0.60, co2KgPerKg=6.5, inBom="true"),
+    dict(id="MAT-FKM", plmName="FKM fluoroelastomer (steel-reinforced)", family="Polymère", densityKgDm3=1.85, priceEurKg=38.00, index="Compound FKM", indexShare=0.50, co2KgPerKg=20.0, inBom="true"),
+    dict(id="MAT-AM60", plmName="Magnesium AM60B (HPDC)", family="Magnésium", densityKgDm3=1.79, priceEurKg=4.10, index="Magnésium (Chine)", indexShare=0.90, co2KgPerKg=28.0, inBom="false"),
+    dict(id="MAT-AE44", plmName="Magnesium AE44 (HPDC)", family="Magnésium", densityKgDm3=1.82, priceEurKg=5.60, index="Magnésium (Chine)", indexShare=0.75, co2KgPerKg=28.0, inBom="false"),
+    dict(id="MAT-AL1370", plmName="Aluminium wire EN AW-1370 (enamelled)", family="Aluminium", densityKgDm3=2.70, priceEurKg=5.80, index="LME Aluminium", indexShare=0.60, co2KgPerKg=9.5, inBom="false"),
+    dict(id="MAT-NO20", plmName="Electrical steel NO20 (0.20 mm)", family="Acier électrique", densityKgDm3=7.65, priceEurKg=3.40, index="Acier électrique NO (contrat)", indexShare=0.80, co2KgPerKg=3.2, inBom="false"),
+    dict(id="MAT-ADI", plmName="Austempered ductile iron ADI", family="Fonte", densityKgDm3=7.10, priceEurKg=1.35, index="Ferrailles et fonte brute", indexShare=0.60, co2KgPerKg=2.2, inBom="false"),
+    dict(id="MAT-6056", plmName="Aluminium alloy EN AW-6056 (fasteners)", family="Aluminium", densityKgDm3=2.72, priceEurKg=4.20, index="LME Aluminium", indexShare=0.70, co2KgPerKg=9.5, inBom="false"),
 ]
 
 # Fournisseurs fictifs : toute ressemblance avec une société existante serait fortuite.
@@ -131,7 +131,7 @@ def option(id_, label, kind, mass_factor, cost_delta, weeks, one_off, feasibilit
 PARTS = {
     "ID_3": dict(
         description="Roulement arrière de l'arbre rapide, hybride céramique isolé (courants d'arbre).",
-        criticality="A", safetyStockDays=15, usageKg=0.8, conversionEur=30.64, envelopeMm="90x90x23",
+        criticality="A", safetyStockDays=15, usageKg=0.8, conversionEur=30.64,
         maturityDate="2026-07-07", plannedRelease="2026-12-15", blocking="Validation de l'isolation électrique en cours chez le fournisseur.",
         sourcingNote="Variante hybride céramique propre à Naniwa : aucune alternative référencée.",
         sourcing=[link("SUP-17", "PRIMARY", 100, 32.0, 63, 42, 2000, "APPROVED", "2026-05-20", contract_end="2027-12-31")],
@@ -139,7 +139,7 @@ PARTS = {
     ),
     "ID_5": dict(
         description="High Speed Shaft",
-        criticality="A", safetyStockDays=8, usageKg=8.4, conversionEur=46.0, envelopeMm="70x70x430",
+        criticality="A", safetyStockDays=8, usageKg=8.4, conversionEur=46.0,
         maturityDate="2026-06-23", plannedRelease="2026-12-10", blocking="Rapport d'endurance à finaliser.",
         sourcing=[
             link("SUP-14", "PRIMARY", 100, 58.6, 20, 2, 1200, "APPROVED", "2026-06-10", contract_end="2027-06-30"),
@@ -153,7 +153,7 @@ PARTS = {
     ),
     "ID_7": dict(
         description="Chemise de refroidissement extrudée à canaux hélicoïdaux, soudée FSW.",
-        criticality="A", safetyStockDays=10, usageKg=4.1, conversionEur=35.05, envelopeMm="300x300x170",
+        criticality="A", safetyStockDays=10, usageKg=4.1, conversionEur=35.05,
         maturityDate="2026-07-22", plannedRelease="2027-02-12", blocking="Micro-fuites sur soudure FSW à 3 bar : plan d'action en cours chez Nordprofil.",
         sourcingNote="Procédé d'extrusion et de soudage propre au fournisseur : aucune alternative référencée.",
         sourcing=[link("SUP-10", "PRIMARY", 100, 49.4, 28, 6, 1150, "CONDITIONAL", "2027-02-05", ramp=3, contract_end="2027-09-30", clause="INDEX_Q")],
@@ -164,13 +164,13 @@ PARTS = {
         options=[option("COOL-THIN", "Parois minces et canal intégré", "DESIGN", 0.85, 2.0, 20, 90000, "MEDIUM", "Aucun : diamètre extérieur inchangé.", "Moyen : à revalider en pression à cause des micro-fuites déjà constatées.")],
     ),
     "ID_10": dict(
-        physical="false", criticality="C", envelopeMm="40x40x150",
+        physical="false", criticality="C",
         maturityDate="2025-01-20",
         revisions=[rev("A", "2025-01-20", "ECO-0096", "Création : secteur de dent pour le maillage éléments finis.", 0.12)],
         options=[option("DATA-TOOTH", "Retirer de la nomenclature (géométrie d'étude)", "DATA", 0.0, 0.0, 0, 0, "HIGH", "Aucun.", "Aucun : correction de données, pas de pièce physique supprimée.")],
     ),
     "ID_12": dict(
-        physical="false", criticality="C", envelopeMm="30x30x230",
+        physical="false", criticality="C",
         maturityDate="2025-09-30",
         revisions=[
             rev("A", "2025-01-20", "ECO-0098", "Création : bobine unitaire pour le maillage.", 0.18),
@@ -179,7 +179,7 @@ PARTS = {
         options=[option("DATA-COIL", "Retirer de la nomenclature (géométrie d'étude)", "DATA", 0.0, 0.0, 0, 0, "HIGH", "Aucun.", "Aucun : correction de données, à confirmer avec l'OEM.")],
     ),
     "ID_14": dict(
-        criticality="A", safetyStockDays=5, usageKg=31.0, conversionEur=46.7, envelopeMm="270x270x150",
+        criticality="A", safetyStockDays=5, usageKg=31.0, conversionEur=46.7,
         maturityDate="2026-06-12", plannedRelease="2027-01-20", blocking="Essais de pertes fer sur la révision C à clôturer.",
         sourcingNote="Matrice progressive propriété de Voltaron. Slovlam est en cours de PPAP, Yangtze seulement identifié.",
         sourcing=[
@@ -199,7 +199,7 @@ PARTS = {
     ),
     "ID_16": dict(
         description="Bobinage en épingles (hairpin), 8 conducteurs par encoche.",
-        criticality="A", safetyStockDays=6, usageKg=7.7, conversionEur=44.0, envelopeMm="270x270x230",
+        criticality="A", safetyStockDays=6, usageKg=7.7, conversionEur=44.0,
         maturityDate="2026-09-08", plannedRelease="2027-03-19", blocking="Refonte hairpin (pertes AC) : essais thermiques en cours, date après le jalon.",
         sourcing=[
             link("SUP-04", "PRIMARY", 70, 159.5, 12, 2, 900, "CONDITIONAL", "2027-02-26", contract_end="2027-12-31", clause="INDEX_M"),
@@ -214,7 +214,7 @@ PARTS = {
     ),
     "ID_20": dict(
         description="Boîtier de différentiel en fonte GS, couronne boulonnée.",
-        criticality="B", safetyStockDays=8, usageKg=4.6, conversionEur=23.03, envelopeMm="150x150x140",
+        criticality="B", safetyStockDays=8, usageKg=4.6, conversionEur=23.03,
         maturityDate="2026-02-17",
         sourcing=[
             link("SUP-18", "PRIMARY", 75, 27.4, 25, 2, 900, "APPROVED", "2026-01-22", contract_end="2027-12-31", clause="INDEX_Q"),
@@ -227,7 +227,7 @@ PARTS = {
         options=[option("DIFF-ADI", "Fonte ADI et parois réduites", "MATERIAL", 0.88, 2.5, 20, 70000, "MEDIUM", "Aucun.", "Moyen : traitement thermique supplémentaire, usinage plus difficile.", "Austempered ductile iron ADI")],
     ),
     "ID_22": dict(
-        criticality="C", safetyStockDays=10, usageKg=0.45, conversionEur=3.44, envelopeMm="20x20x143",
+        criticality="C", safetyStockDays=10, usageKg=0.45, conversionEur=3.44,
         maturityDate="2025-12-09",
         sourcing=[
             link("SUP-25", "PRIMARY", 80, 4.0, 15, 2, 1400, "APPROVED", "2025-11-14", contract_end="2027-12-31"),
@@ -237,7 +237,7 @@ PARTS = {
     ),
     "ID_24": dict(
         description="Satellite conique du différentiel.",
-        criticality="B", safetyStockDays=8, usageKg=0.75, conversionEur=7.42, envelopeMm="62x62x35",
+        criticality="B", safetyStockDays=8, usageKg=0.75, conversionEur=7.42,
         maturityDate="2025-12-09",
         sourcing=[
             link("SUP-11", "PRIMARY", 70, 8.4, 30, 2, 1800, "APPROVED", "2025-11-20", contract_end="2027-06-30"),
@@ -247,7 +247,7 @@ PARTS = {
     ),
     "ID_26": dict(
         description="Planétaire du différentiel, côté gauche et côté droit.",
-        criticality="B", safetyStockDays=8, usageKg=1.2, conversionEur=10.94, envelopeMm="80x80x50",
+        criticality="B", safetyStockDays=8, usageKg=1.2, conversionEur=10.94,
         maturityDate="2025-12-09",
         sourcing=[
             link("SUP-11", "PRIMARY", 70, 12.5, 30, 2, 1800, "APPROVED", "2025-11-20", contract_end="2027-06-30"),
@@ -257,7 +257,7 @@ PARTS = {
     ),
     "ID_30": dict(
         description="Roulement de l'arbre rapide, côté extérieur du réducteur.",
-        criticality="B", safetyStockDays=15, usageKg=0.85, conversionEur=16.05, envelopeMm="90x90x23",
+        criticality="B", safetyStockDays=15, usageKg=0.85, conversionEur=16.05,
         maturityDate="2025-11-05",
         sourcing=[
             link("SUP-15", "PRIMARY", 60, 17.5, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
@@ -267,7 +267,7 @@ PARTS = {
     ),
     "ID_32": dict(
         description="Roulement de l'arbre rapide, côté moteur.",
-        criticality="B", safetyStockDays=15, usageKg=0.7, conversionEur=13.81, envelopeMm="85x85x19",
+        criticality="B", safetyStockDays=15, usageKg=0.7, conversionEur=13.81,
         maturityDate="2025-11-05",
         sourcing=[
             link("SUP-15", "PRIMARY", 60, 15.0, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
@@ -277,7 +277,7 @@ PARTS = {
     ),
     "ID_34": dict(
         description="Roulement de sortie, côté couvercle (dans le logement de roulement).",
-        criticality="B", safetyStockDays=15, usageKg=1.9, conversionEur=17.77, envelopeMm="130x130x33",
+        criticality="B", safetyStockDays=15, usageKg=1.9, conversionEur=17.77,
         maturityDate="2025-11-05",
         sourcing=[
             link("SUP-16", "PRIMARY", 70, 21.0, 21, 2, 1300, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
@@ -288,7 +288,7 @@ PARTS = {
     ),
     "ID_36": dict(
         description="Roulement de sortie, côté moteur.",
-        criticality="B", safetyStockDays=15, usageKg=1.65, conversionEur=16.2, envelopeMm="120x120x31",
+        criticality="B", safetyStockDays=15, usageKg=1.65, conversionEur=16.2,
         maturityDate="2025-11-05",
         sourcing=[
             link("SUP-16", "PRIMARY", 70, 19.0, 21, 2, 1300, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
@@ -298,7 +298,7 @@ PARTS = {
     ),
     "ID_38": dict(
         description="Roulement de l'arbre intermédiaire, côté couvercle.",
-        criticality="B", safetyStockDays=15, usageKg=1.25, conversionEur=13.88, envelopeMm="110x110x27",
+        criticality="B", safetyStockDays=15, usageKg=1.25, conversionEur=13.88,
         maturityDate="2025-11-05",
         sourcing=[
             link("SUP-15", "PRIMARY", 60, 16.0, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
@@ -308,7 +308,7 @@ PARTS = {
     ),
     "ID_40": dict(
         description="Roulement de l'arbre intermédiaire, côté moteur.",
-        criticality="B", safetyStockDays=15, usageKg=1.1, conversionEur=12.63, envelopeMm="100x100x25",
+        criticality="B", safetyStockDays=15, usageKg=1.1, conversionEur=12.63,
         maturityDate="2025-11-05",
         sourcing=[
             link("SUP-15", "PRIMARY", 60, 14.5, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
@@ -318,7 +318,7 @@ PARTS = {
     ),
     "ID_42": dict(
         description="Pignon d'entrée, 1er étage, sur l'arbre rapide.",
-        criticality="A", safetyStockDays=8, usageKg=1.9, conversionEur=22.53, envelopeMm="52x52x45",
+        criticality="A", safetyStockDays=8, usageKg=1.9, conversionEur=22.53,
         maturityDate="2026-01-27",
         sourcing=[
             link("SUP-11", "PRIMARY", 70, 25.0, 30, 2, 1300, "APPROVED", "2025-12-16", contract_end="2027-06-30"),
@@ -328,7 +328,7 @@ PARTS = {
     ),
     "ID_44": dict(
         description="Roue du 1er étage, sur l'arbre intermédiaire.",
-        criticality="A", safetyStockDays=8, usageKg=5.4, conversionEur=38.98, envelopeMm="148x148x40",
+        criticality="A", safetyStockDays=8, usageKg=5.4, conversionEur=38.98,
         maturityDate="2026-05-26", plannedRelease="2026-12-18", blocking="Essai NVH final prévu en décembre.",
         sourcing=[
             link("SUP-11", "PRIMARY", 70, 46.0, 30, 2, 900, "APPROVED", "2026-05-12", contract_end="2027-06-30"),
@@ -343,7 +343,7 @@ PARTS = {
     ),
     "ID_46": dict(
         description="Pignon du 2e étage, sur l'arbre intermédiaire.",
-        criticality="A", safetyStockDays=8, usageKg=2.3, conversionEur=25.01, envelopeMm="64x64x60",
+        criticality="A", safetyStockDays=8, usageKg=2.3, conversionEur=25.01,
         maturityDate="2025-12-16",
         sourcing=[
             link("SUP-11", "PRIMARY", 70, 28.0, 30, 2, 900, "APPROVED", "2025-11-25", contract_end="2027-06-30"),
@@ -356,7 +356,7 @@ PARTS = {
     ),
     "ID_48": dict(
         description="Couronne du 2e étage, boulonnée sur le boîtier de différentiel.",
-        criticality="A", safetyStockDays=8, usageKg=10.4, conversionEur=57.98, envelopeMm="244x244x38",
+        criticality="A", safetyStockDays=8, usageKg=10.4, conversionEur=57.98,
         maturityDate="2026-09-22", plannedRelease="2027-02-26", blocking="Micro-géométrie reprise après essais NVH : nouvelle campagne au banc en cours.",
         sourcingNote="Moravia et Deccan sont à qualifier sur la révision D.",
         sourcing=[
@@ -374,7 +374,7 @@ PARTS = {
     ),
     "ID_50": dict(
         description="Arbre intermédiaire.",
-        criticality="A", safetyStockDays=8, usageKg=4.6, conversionEur=38.02, envelopeMm="64x64x240",
+        criticality="A", safetyStockDays=8, usageKg=4.6, conversionEur=38.02,
         maturityDate="2026-06-02", plannedRelease="2026-12-18", blocking="Attente de la clôture de l'essai NVH du 1er étage.",
         sourcing=[
             link("SUP-11", "PRIMARY", 100, 44.0, 30, 2, 1300, "APPROVED", "2026-05-12", contract_end="2027-06-30"),
@@ -388,7 +388,7 @@ PARTS = {
     ),
     "ID_53": dict(
         description="Joint à lèvre FKM haute vitesse de l'arbre rapide.",
-        criticality="A", safetyStockDays=20, usageKg=0.03, conversionEur=7.36, envelopeMm="60x60x8",
+        criticality="A", safetyStockDays=20, usageKg=0.03, conversionEur=7.36,
         maturityDate="2026-03-24",
         sourcingNote="Lèvre haute vitesse validée uniquement chez Elastotec : aucune alternative référencée.",
         sourcing=[link("SUP-23", "PRIMARY", 100, 8.5, 30, 2, 1500, "APPROVED", "2026-03-10", contract_end="2027-12-31")],
@@ -396,7 +396,7 @@ PARTS = {
     ),
     "ID_55": dict(
         description="Demi-carter gauche du réducteur, porte les roulements côté couvercle.",
-        criticality="A", safetyStockDays=6, usageKg=9.8, conversionEur=38.0, envelopeMm="420x380x150",
+        criticality="A", safetyStockDays=6, usageKg=9.8, conversionEur=38.0,
         maturityDate="2026-06-30", modified="2026-08-19", plannedRelease="2027-01-29", blocking="Modifiée après le gel sans nouvelle révision : à régulariser.",
         sourcingNote="Moule HPDC propriété de Garda. Bohemia est en cours de PPAP avec un second moule à financer.",
         sourcing=[
@@ -414,7 +414,7 @@ PARTS = {
     ),
     "ID_57": dict(
         description="Demi-carter droit du réducteur, porte les roulements côté moteur.",
-        criticality="A", safetyStockDays=6, usageKg=6.9, conversionEur=29.0, envelopeMm="420x380x130",
+        criticality="A", safetyStockDays=6, usageKg=6.9, conversionEur=29.0,
         maturityDate="2026-08-25", plannedRelease="2027-02-05", blocking="Révision C (nouvel orifice de refroidissement) à valider en étanchéité.",
         sourcingNote="Moule HPDC propriété de Garda. Bohemia est en cours de PPAP avec un second moule à financer.",
         sourcing=[
@@ -433,7 +433,7 @@ PARTS = {
     ),
     "ID_59": dict(
         description="Logement du roulement de sortie, côté couvercle.",
-        criticality="B", safetyStockDays=8, usageKg=2.5, conversionEur=12.03, envelopeMm="170x170x60",
+        criticality="B", safetyStockDays=8, usageKg=2.5, conversionEur=12.03,
         maturityDate="2026-03-03",
         sourcing=[
             link("SUP-07", "PRIMARY", 70, 19.4, 21, 3, 1000, "APPROVED", "2026-02-17", contract_end="2028-03-31", clause="INDEX_Q"),
@@ -446,7 +446,7 @@ PARTS = {
     ),
     "ID_61": dict(
         description="Carter du moteur, coulé en basse pression, reçoit le stator fretté.",
-        criticality="A", safetyStockDays=6, usageKg=8.4, conversionEur=46.02, envelopeMm="320x320x340",
+        criticality="A", safetyStockDays=6, usageKg=8.4, conversionEur=46.02,
         maturityDate="2026-09-01", plannedRelease="2027-01-15", blocking="Rapport d'étanchéité de la révision C attendu.",
         sourcingNote="Coulée basse pression et noyaux sable propres à Garda : aucune alternative référencée.",
         sourcing=[link("SUP-07", "PRIMARY", 100, 75.0, 21, 3, 1150, "APPROVED", "2026-08-28", contract_end="2028-03-31", clause="INDEX_Q")],
@@ -461,7 +461,7 @@ PARTS = {
         ],
     ),
     "ID_63": dict(
-        criticality="B", safetyStockDays=8, usageKg=1.5, conversionEur=5.53, envelopeMm="240x240x18",
+        criticality="B", safetyStockDays=8, usageKg=1.5, conversionEur=5.53,
         maturityDate="2026-06-30", plannedRelease="2027-03-05", blocking="Fournisseur non désigné : décision de faire ou d'acheter attendue, date après le jalon.",
         sourcing=[],
         revisions=[
@@ -472,7 +472,7 @@ PARTS = {
     ),
     "ID_65": dict(
         description="Support de transmission fixé au carter.",
-        criticality="B", safetyStockDays=8, usageKg=3.7, conversionEur=12.68, envelopeMm="260x200x110",
+        criticality="B", safetyStockDays=8, usageKg=3.7, conversionEur=12.68,
         maturityDate="2026-04-07", plannedRelease="2027-02-12", blocking="Pièce RELEASED alors que le PPAP d'Atlas n'est pas terminé.",
         sourcing=[
             link("SUP-09", "PRIMARY", 100, 23.6, 28, 6, 1100, "IN_PROGRESS", "2027-02-12", requal=17, contract_end="2027-06-30"),
@@ -489,14 +489,14 @@ PARTS = {
     ),
     "ID_67": dict(
         description="Raccord coudé du circuit de refroidissement.",
-        criticality="C", safetyStockDays=10, usageKg=0.13, conversionEur=2.09, envelopeMm="70x70x35",
+        criticality="C", safetyStockDays=10, usageKg=0.13, conversionEur=2.09,
         maturityDate="2026-01-20",
         sourcing=[link("SUP-24", "PRIMARY", 100, 2.6, 18, 2, 2600, "APPROVED", "2026-01-06", contract_end="2027-12-31")],
         revisions=[rev("A", "2025-04-29", "ECO-0176", "Création du raccord coudé.", 0.12)],
     ),
     "ID_69": dict(
         description="Vis M10 x 115, classe 10.9, fixation du support de transmission.",
-        criticality="C", safetyStockDays=15, usageKg=0.1, conversionEur=0.31, envelopeMm="16x16x125",
+        criticality="C", safetyStockDays=15, usageKg=0.1, conversionEur=0.31,
         maturityDate="2025-10-14",
         sourcing=[
             link("SUP-20", "PRIMARY", 60, 0.45, 14, 2, 6000, "APPROVED", "2025-09-30", contract_end="2027-12-31"),
@@ -507,7 +507,7 @@ PARTS = {
     ),
     "ID_71": dict(
         description="Vis M8 x 50, classe 10.9, fixation du couvercle.",
-        criticality="C", safetyStockDays=15, usageKg=0.032, conversionEur=0.13, envelopeMm="13x13x58",
+        criticality="C", safetyStockDays=15, usageKg=0.032, conversionEur=0.13,
         maturityDate="2026-08-04", plannedRelease="2026-12-11", blocking="Référence obsolète : à remplacer dans la nomenclature par la nouvelle vis de longueur corrigée.",
         sourcing=[
             link("SUP-20", "PRIMARY", 60, 0.17, 14, 2, 20000, "APPROVED", "2025-09-30", contract_end="2027-12-31"),
@@ -517,14 +517,14 @@ PARTS = {
     ),
     "ID_73": dict(
         description="Vis de fixation du carter moteur.",
-        criticality="C", safetyStockDays=15, usageKg=0.036, conversionEur=0.14, envelopeMm="13x13x60",
+        criticality="C", safetyStockDays=15, usageKg=0.036, conversionEur=0.14,
         maturityDate="2025-10-14",
         sourcing=[link("SUP-20", "PRIMARY", 100, 0.19, 14, 2, 5000, "APPROVED", "2025-09-30", contract_end="2027-12-31")],
         revisions=[rev("A", "2025-05-06", "ECO-0183", "Création : vis catalogue.", 0.03)],
     ),
     "ID_74": dict(
         description="Vis de fixation du flasque moteur.",
-        criticality="C", safetyStockDays=15, usageKg=0.056, conversionEur=0.17, envelopeMm="14x14x70",
+        criticality="C", safetyStockDays=15, usageKg=0.056, conversionEur=0.17,
         maturityDate="2025-10-14",
         sourcing=[
             link("SUP-20", "PRIMARY", 80, 0.25, 14, 2, 4000, "APPROVED", "2025-09-30", contract_end="2027-12-31"),
@@ -533,13 +533,13 @@ PARTS = {
         revisions=[rev("A", "2025-05-06", "ECO-0184", "Création : vis catalogue.", 0.05)],
     ),
     "ID_76": dict(
-        criticality="C", safetyStockDays=15, usageKg=0.032, conversionEur=0.12, envelopeMm="13x13x58",
+        criticality="C", safetyStockDays=15, usageKg=0.032, conversionEur=0.12,
         maturityDate="2026-09-29", plannedRelease="2026-12-04", blocking="Prix non renseigné : devis attendu.",
         sourcing=[link("SUP-20", "PRIMARY", 100, None, 14, 2, 4000, "APPROVED", "2025-09-30", contract_end="2027-12-31")],
         revisions=[rev("A", "2025-05-06", "ECO-0185", "Création : vis catalogue.", 0.028)],
     ),
     "ID_78": dict(
-        criticality="C", safetyStockDays=15, usageKg=0.125, conversionEur=0.38, envelopeMm="16x16x165",
+        criticality="C", safetyStockDays=15, usageKg=0.125, conversionEur=0.38,
         description="Vis M10 x 155, classe 10.9, assemblage des deux demi-carters.",
         maturityDate="2025-10-14",
         sourcing=[
@@ -550,6 +550,35 @@ PARTS = {
         revisions=[rev("A", "2025-05-06", "ECO-0186", "Création : vis catalogue.", 0.113)],
         options=[option("BOLT-AL", "Vis en aluminium EN AW-6056", "MATERIAL", 0.40, 1.2, 14, 45000, "MEDIUM", "Aucun : mêmes dimensions.", "Moyen : précharge et fluage à revalider, couple de serrage à reprendre.", "Aluminium alloy EN AW-6056 (fasteners)")],
     ),
+}
+
+# Complexité de fabrication : (procédé, note du procédé sur 5, note de précision sur 5, nombre d'opérations).
+_BEARING = ("Roulement de précision catalogue", 3, 4, 8)
+_GEAR = ("Taillage, cémentation et rectification de denture", 4, 5, 12)
+_SCREW = ("Vis catalogue : frappe à froid, roulage, revêtement lamellaire", 1, 2, 4)
+COMPLEXITY = {
+    "ID_3": ("Roulement hybride céramique à isolation électrique", 5, 5, 11),
+    "ID_5": ("Forgeage, tournage, cannelures, trempe et rectification", 4, 5, 11),
+    "ID_7": ("Extrusion à canaux hélicoïdaux, soudage FSW, contrôle d'étanchéité", 4, 3, 8),
+    "ID_14": ("Découpe progressive, empilage et assemblage du paquet de tôles", 4, 4, 7),
+    "ID_16": ("Épingles : formage, insertion, torsadage, soudage laser, imprégnation", 5, 4, 12),
+    "ID_20": ("Fonderie de fonte GS, usinage multi-faces", 3, 4, 7),
+    "ID_22": ("Décolletage, cémentation et rectification", 2, 3, 5),
+    "ID_24": ("Forgeage de précision, cémentation, finition de denture conique", 3, 4, 7),
+    "ID_26": ("Forgeage de précision, cannelures, cémentation et rectification", 3, 4, 8),
+    "ID_30": _BEARING, "ID_32": _BEARING, "ID_34": _BEARING, "ID_36": _BEARING, "ID_38": _BEARING, "ID_40": _BEARING,
+    "ID_42": _GEAR, "ID_44": _GEAR, "ID_46": _GEAR,
+    "ID_48": ("Forgeage, taillage, cémentation, rectification avec micro-géométrie NVH", 4, 5, 13),
+    "ID_50": ("Forgeage, tournage, taillage, cémentation et rectification", 4, 5, 11),
+    "ID_53": ("Moulage FKM sur armature acier, lèvre haute vitesse", 3, 3, 4),
+    "ID_55": ("Fonderie sous pression, usinage des portées, contrôle d'étanchéité", 4, 4, 9),
+    "ID_57": ("Fonderie sous pression, usinage des portées, contrôle d'étanchéité", 4, 4, 9),
+    "ID_59": ("Fonderie sous pression, usinage de la portée", 3, 4, 6),
+    "ID_61": ("Coulée basse pression à noyaux sable, usinage, logement du stator fretté", 5, 4, 10),
+    "ID_63": ("Découpe-emboutissage, usinage de la portée", 2, 4, 5),
+    "ID_65": ("Fonderie sous pression, usinage des fixations", 3, 3, 6),
+    "ID_67": ("Injection plastique", 2, 2, 3),
+    "ID_69": _SCREW, "ID_71": _SCREW, "ID_73": _SCREW, "ID_74": _SCREW, "ID_76": _SCREW, "ID_78": _SCREW,
 }
 
 # Assemblages : historique de révision. La maturité est dans MATURITY.
@@ -619,56 +648,54 @@ INTERFACE_TYPES = [
     dict(id="study", label="Géométrie d'étude", test="Aucun essai", weeks=0, costEur=0),
 ]
 
-XML_EVIDENCE = "Déduit des positions du XML d'origine"
-ASSUMED_EVIDENCE = "Hypothèse d'architecture"
 
 # (pièce, pièce, type, description, justification)
 INTERFACES = [
-    ("ID_42", "ID_44", "mesh", "1er étage, entraxe 100,0 mm, même plan de denture", XML_EVIDENCE),
-    ("ID_46", "ID_48", "mesh", "2e étage, entraxe 154,0 mm, même plan de denture", XML_EVIDENCE),
-    ("ID_24", "ID_26", "mesh", "Engrènement conique du différentiel", XML_EVIDENCE),
-    ("ID_5", "ID_3", "bearing_seat", "Roulement coaxial à l'arbre rapide, côté arrière du moteur", XML_EVIDENCE),
-    ("ID_5", "ID_30", "bearing_seat", "Roulement coaxial à l'arbre rapide, côté couvercle", XML_EVIDENCE),
-    ("ID_5", "ID_32", "bearing_seat", "Roulement coaxial à l'arbre rapide, côté moteur", XML_EVIDENCE),
-    ("ID_50", "ID_38", "bearing_seat", "Roulement coaxial à l'arbre intermédiaire, côté couvercle", XML_EVIDENCE),
-    ("ID_50", "ID_40", "bearing_seat", "Roulement coaxial à l'arbre intermédiaire, côté moteur", XML_EVIDENCE),
-    ("ID_20", "ID_34", "bearing_seat", "Roulement de sortie coaxial au différentiel, côté couvercle", XML_EVIDENCE),
-    ("ID_20", "ID_36", "bearing_seat", "Roulement de sortie coaxial au différentiel, côté moteur", XML_EVIDENCE),
-    ("ID_5", "ID_42", "press_fit", "Pignon coaxial à l'arbre rapide", XML_EVIDENCE),
-    ("ID_50", "ID_44", "press_fit", "Roue coaxiale à l'arbre intermédiaire", XML_EVIDENCE),
-    ("ID_50", "ID_46", "press_fit", "Pignon coaxial à l'arbre intermédiaire", XML_EVIDENCE),
-    ("ID_48", "ID_20", "bolted", "Couronne coaxiale au boîtier de différentiel", XML_EVIDENCE),
-    ("ID_20", "ID_22", "pin", "Axe de satellites dans le boîtier", XML_EVIDENCE),
-    ("ID_22", "ID_24", "pin", "Satellites de part et d'autre de l'axe", XML_EVIDENCE),
-    ("ID_14", "ID_16", "winding", "Épingles insérées dans les encoches du paquet", ASSUMED_EVIDENCE),
-    ("ID_14", "ID_61", "shrink_fit", "Paquet de tôles fretté dans le carter moteur", ASSUMED_EVIDENCE),
-    ("ID_7", "ID_14", "thermal", "Chemise autour du paquet de tôles, même axe que le moteur", XML_EVIDENCE),
-    ("ID_7", "ID_61", "sealing", "Chemise étanche dans le carter moteur", ASSUMED_EVIDENCE),
-    ("ID_7", "ID_67", "coolant", "Raccords d'entrée et de sortie de la chemise", ASSUMED_EVIDENCE),
-    ("ID_67", "ID_61", "coolant", "Raccords sur le dessus du carter moteur", XML_EVIDENCE),
-    ("ID_10", "ID_14", "study", "Secteur de maillage dupliquant le paquet complet", XML_EVIDENCE),
-    ("ID_12", "ID_16", "study", "Bobine unitaire dupliquant le bobinage complet", ASSUMED_EVIDENCE),
-    ("ID_30", "ID_55", "bearing_seat", "Plan de roulements côté couvercle (Y = -175 mm environ)", XML_EVIDENCE),
-    ("ID_38", "ID_55", "bearing_seat", "Plan de roulements côté couvercle (Y = -175 mm environ)", XML_EVIDENCE),
-    ("ID_34", "ID_59", "bearing_seat", "Roulement de sortie dans son logement", XML_EVIDENCE),
-    ("ID_59", "ID_55", "bolted", "Logement rapporté sur le demi-carter gauche", ASSUMED_EVIDENCE),
-    ("ID_32", "ID_57", "bearing_seat", "Plan de roulements côté moteur (Y = 0 mm environ)", XML_EVIDENCE),
-    ("ID_40", "ID_57", "bearing_seat", "Plan de roulements côté moteur (Y = 0 mm environ)", XML_EVIDENCE),
-    ("ID_36", "ID_57", "bearing_seat", "Plan de roulements côté moteur (Y = 0 mm environ)", XML_EVIDENCE),
-    ("ID_3", "ID_63", "bearing_seat", "Roulement arrière dans le flasque (Y = 315 mm environ)", XML_EVIDENCE),
-    ("ID_63", "ID_61", "bolted", "Flasque vissé à l'arrière du carter moteur", XML_EVIDENCE),
-    ("ID_55", "ID_57", "bolted", "Demi-carters assemblés par 14 vis M10 x 155", XML_EVIDENCE),
-    ("ID_78", "ID_55", "bolted", "Couronne de 14 vis autour du carter (Y = -170 mm)", XML_EVIDENCE),
-    ("ID_78", "ID_57", "bolted", "Couronne de 14 vis autour du carter (Y = -170 mm)", XML_EVIDENCE),
-    ("ID_69", "ID_65", "bolted", "4 vis M10 x 115 sur le support de transmission", ASSUMED_EVIDENCE),
-    ("ID_65", "ID_57", "bolted", "Support fixé au demi-carter droit", ASSUMED_EVIDENCE),
-    ("ID_71", "ID_55", "bolted", "Couronne de 13 vis M8 du couvercle (Y = -229 mm)", XML_EVIDENCE),
-    ("ID_73", "ID_61", "bolted", "3 vis de fixation du carter moteur", XML_EVIDENCE),
-    ("ID_74", "ID_63", "bolted", "2 vis du flasque (Y = 325 mm)", XML_EVIDENCE),
-    ("ID_76", "ID_63", "bolted", "Vis du flasque (Y = 325 mm)", XML_EVIDENCE),
-    ("ID_61", "ID_57", "bolted", "Carter moteur assemblé au demi-carter droit", ASSUMED_EVIDENCE),
-    ("ID_53", "ID_5", "sealing", "Lèvre du joint sur l'arbre rapide", ASSUMED_EVIDENCE),
-    ("ID_53", "ID_57", "sealing", "Joint logé dans le demi-carter droit", ASSUMED_EVIDENCE),
+    ("ID_42", "ID_44", "mesh", "1er étage, entraxe 100,0 mm, même plan de denture"),
+    ("ID_46", "ID_48", "mesh", "2e étage, entraxe 154,0 mm, même plan de denture"),
+    ("ID_24", "ID_26", "mesh", "Engrènement conique du différentiel"),
+    ("ID_5", "ID_3", "bearing_seat", "Roulement coaxial à l'arbre rapide, côté arrière du moteur"),
+    ("ID_5", "ID_30", "bearing_seat", "Roulement coaxial à l'arbre rapide, côté couvercle"),
+    ("ID_5", "ID_32", "bearing_seat", "Roulement coaxial à l'arbre rapide, côté moteur"),
+    ("ID_50", "ID_38", "bearing_seat", "Roulement coaxial à l'arbre intermédiaire, côté couvercle"),
+    ("ID_50", "ID_40", "bearing_seat", "Roulement coaxial à l'arbre intermédiaire, côté moteur"),
+    ("ID_20", "ID_34", "bearing_seat", "Roulement de sortie coaxial au différentiel, côté couvercle"),
+    ("ID_20", "ID_36", "bearing_seat", "Roulement de sortie coaxial au différentiel, côté moteur"),
+    ("ID_5", "ID_42", "press_fit", "Pignon coaxial à l'arbre rapide"),
+    ("ID_50", "ID_44", "press_fit", "Roue coaxiale à l'arbre intermédiaire"),
+    ("ID_50", "ID_46", "press_fit", "Pignon coaxial à l'arbre intermédiaire"),
+    ("ID_48", "ID_20", "bolted", "Couronne coaxiale au boîtier de différentiel"),
+    ("ID_20", "ID_22", "pin", "Axe de satellites dans le boîtier"),
+    ("ID_22", "ID_24", "pin", "Satellites de part et d'autre de l'axe"),
+    ("ID_14", "ID_16", "winding", "Épingles insérées dans les encoches du paquet"),
+    ("ID_14", "ID_61", "shrink_fit", "Paquet de tôles fretté dans le carter moteur"),
+    ("ID_7", "ID_14", "thermal", "Chemise autour du paquet de tôles, même axe que le moteur"),
+    ("ID_7", "ID_61", "sealing", "Chemise étanche dans le carter moteur"),
+    ("ID_7", "ID_67", "coolant", "Raccords d'entrée et de sortie de la chemise"),
+    ("ID_67", "ID_61", "coolant", "Raccords sur le dessus du carter moteur"),
+    ("ID_10", "ID_14", "study", "Secteur de maillage dupliquant le paquet complet"),
+    ("ID_12", "ID_16", "study", "Bobine unitaire dupliquant le bobinage complet"),
+    ("ID_30", "ID_55", "bearing_seat", "Plan de roulements côté couvercle (Y = -175 mm environ)"),
+    ("ID_38", "ID_55", "bearing_seat", "Plan de roulements côté couvercle (Y = -175 mm environ)"),
+    ("ID_34", "ID_59", "bearing_seat", "Roulement de sortie dans son logement"),
+    ("ID_59", "ID_55", "bolted", "Logement rapporté sur le demi-carter gauche"),
+    ("ID_32", "ID_57", "bearing_seat", "Plan de roulements côté moteur (Y = 0 mm environ)"),
+    ("ID_40", "ID_57", "bearing_seat", "Plan de roulements côté moteur (Y = 0 mm environ)"),
+    ("ID_36", "ID_57", "bearing_seat", "Plan de roulements côté moteur (Y = 0 mm environ)"),
+    ("ID_3", "ID_63", "bearing_seat", "Roulement arrière dans le flasque (Y = 315 mm environ)"),
+    ("ID_63", "ID_61", "bolted", "Flasque vissé à l'arrière du carter moteur"),
+    ("ID_55", "ID_57", "bolted", "Demi-carters assemblés par 14 vis M10 x 155"),
+    ("ID_78", "ID_55", "bolted", "Couronne de 14 vis autour du carter (Y = -170 mm)"),
+    ("ID_78", "ID_57", "bolted", "Couronne de 14 vis autour du carter (Y = -170 mm)"),
+    ("ID_69", "ID_65", "bolted", "4 vis M10 x 115 sur le support de transmission"),
+    ("ID_65", "ID_57", "bolted", "Support fixé au demi-carter droit"),
+    ("ID_71", "ID_55", "bolted", "Couronne de 13 vis M8 du couvercle (Y = -229 mm)"),
+    ("ID_73", "ID_61", "bolted", "3 vis de fixation du carter moteur"),
+    ("ID_74", "ID_63", "bolted", "2 vis du flasque (Y = 325 mm)"),
+    ("ID_76", "ID_63", "bolted", "Vis du flasque (Y = 325 mm)"),
+    ("ID_61", "ID_57", "bolted", "Carter moteur assemblé au demi-carter droit"),
+    ("ID_53", "ID_5", "sealing", "Lèvre du joint sur l'arbre rapide"),
+    ("ID_53", "ID_57", "sealing", "Joint logé dans le demi-carter droit"),
 ]
 
 # Événements fictifs. Les cours cités sont réels (voir README).
@@ -810,6 +837,9 @@ def build_enrichment(root, structure, wrappers):
     for product_id, spec in {**ASSEMBLIES, **PARTS}.items():
         plm_id, name = names[product_id]
         attrs = {k: v for k, v in spec.items() if k not in ("revisions", "sourcing", "options", "description", "modified")}
+        if product_id in COMPLEXITY:
+            process, process_rating, precision_rating, operations = COMPLEXITY[product_id]
+            attrs.update(process=process, processRating=process_rating, precisionRating=precision_rating, operations=operations)
         part = ext(parts, "Part", ref=product_id, plmId=plm_id, name=name, **attrs)
         for row in spec.get("sourcing", []):
             ext(part, "Sourcing", **row)
@@ -827,8 +857,8 @@ def build_enrichment(root, structure, wrappers):
         ext(interface_types, "InterfaceType", **row)
 
     interfaces = ext(enrichment, "Interfaces")
-    for first, second, kind, note, evidence in INTERFACES:
-        ext(interfaces, "Interface", first=first, second=second, type=kind, note=note, evidence=evidence)
+    for first, second, kind, note in INTERFACES:
+        ext(interfaces, "Interface", first=first, second=second, type=kind, note=note)
 
     scenarios = ext(enrichment, "Scenarios")
     for scenario in SCENARIOS:

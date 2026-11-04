@@ -75,7 +75,7 @@ def field_completeness(model):
                                                                            ("Maturité", key("maturity")), ("Masse", key("mass_kg"))]),
         ("Instances", model.instances, [("ID", key("plm_id")), ("Nom", key("name")), ("Description", key("description"))]),
         ("Représentations 3D", reps, [("Nom", key("name")), ("ID PLM", key("plm_id")), ("Description", key("description"))]),
-        ("Pièces physiques, extension", model.physical_parts, [("Fournisseur", key("sourcing")), ("Prix fournisseur", priced), ("Historique de révision complet", complete_history), ("Matière consommée", key("usage_kg"))]),
+        ("Pièces physiques, extension", model.physical_parts, [("Fournisseur", key("sourcing")), ("Prix fournisseur", priced), ("Historique de révision complet", complete_history), ("Matière consommée", key("usage_kg")), ("Procédé et complexité", key("process"))]),
     ]
     rows = []
     for group, items, fields in groups:

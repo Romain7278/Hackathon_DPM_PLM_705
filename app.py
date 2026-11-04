@@ -19,10 +19,7 @@ model = get_model(DATA_XML.stat().st_mtime)
 
 chat.render(model)
 
-theme.html(
-    '<div class="plm-header"><h1>PLM Intelligence · E-drive avant 410 kW</h1>'
-    "<span>Structure, masses et matériaux : export XML de l'OEM. Coûts, fournisseurs, maturités et historiques : données simulées, fournisseurs et événements fictifs.</span></div>"
-)
+theme.html('<div class="plm-header"><h1>PLM Intelligence · E-drive avant 410 kW</h1></div>')
 
 tabs = st.tabs([MAIN_EXPLORER, MAIN_RISKS, MAIN_IMPACTS], key="main_tab", on_change="rerun")
 with tabs[0]:

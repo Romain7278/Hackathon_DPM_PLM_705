@@ -6,11 +6,13 @@ import streamlit as st
 
 from plm import scenarios
 from plm.fmt import compact_eur, number, pct
+from plm.model import COMPLEXITY_LEVELS, OPERATIONS_CEILING
 from ui import theme
 from ui.state import open_from_table, open_part
 
 TOP_PARTS = 12
-CLASS_RULES = "Classe A : pièce vitale pour la fonction. Classe B : pièce importante. Classe C : pièce standard, facile à requalifier ailleurs. Ces classes sont une hypothèse du jeu de données simulé."
+CLASS_RULES = "Classe A : pièce vitale pour la fonction. Classe B : pièce importante. Classe C : pièce standard, facile à requalifier ailleurs."
+CRITERION_COLORS = [*theme.PALETTE, theme.NEUTRAL_BAR]  # 9 critères : le gris neutre complète les 8 teintes de la palette
 
 
 def part_node_ids(model, part_ids):
@@ -29,7 +31,7 @@ def score_chart(rows):
         cells = [next(b for b in r["breakdown"] if b["key"] == criterion["key"]) for r in top]
         fig.add_bar(
             y=names, x=[c["points"] for c in cells], name=criterion["label"], orientation="h", width=0.66,
-            marker=dict(color=theme.PALETTE[index], line=dict(color=theme.SURFACE, width=2)),
+            marker=dict(color=CRITERION_COLORS[index], line=dict(color=theme.SURFACE, width=2)),
             hovertext=[f"<b>{number(c['points'], 1)} points sur {c['max']}</b><br>{escape(criterion['label'])}<br>{escape(c['detail'])}" for c in cells], hoverinfo="text",
         )
     fig.add_scatter(y=names, x=[sum(b["points"] for b in r["breakdown"]) for r in top], text=[f"  {r['score']} · {r['level']}" for r in top], mode="text", textposition="middle right",
@@ -52,10 +54,38 @@ def render_part_detail(model, rows):
     st.button("Ouvrir la fiche", key="risk_open_part", on_click=open_part, args=(model.nodes_by_part[part_id][0].id,))
 
 
-def render_method():
+def render_influences(rows):
+    """Explique le poids de la complexité et des interfaces, avec la répartition réelle des pièces."""
+    left, right = st.columns(2, gap="medium")
+    with left:
+        st.markdown("**Comment la complexité de la pièce influe sur le score**")
+        st.markdown("Une pièce complexe demande un procédé rare, des tolérances serrées et beaucoup d'opérations. Elle est plus difficile à requalifier ailleurs et à relancer après un arrêt : "
+                    f"elle ajoute jusqu'à **{scenarios.COMPLEXITY_POINTS['Très élevée']} points sur 100** au score.")
+        st.markdown(f"Score de complexité sur 100 = procédé (40 points, note sur 5) + précision (30 points, note sur 5) + nombre d'opérations (30 points, plafonné à {OPERATIONS_CEILING}).")
+        table = []
+        previous = None
+        for level, threshold in COMPLEXITY_LEVELS:
+            bounds = f"{threshold} ou plus" if previous is None else f"{threshold} à {previous - 1}" if threshold else f"Moins de {previous}"
+            table.append((level, bounds, scenarios.COMPLEXITY_POINTS[level], sum(r["complexity_level"] == level for r in rows)))
+            previous = threshold
+        theme.table(["Complexité", "Score de complexité", "Points de risque", "Pièces"], table, numeric=(2, 3))
+        top = max(rows, key=lambda r: r["complexity"])
+        st.caption(f"Exemple : {top['name']}, procédé {top['process_rating']}/5, précision {top['precision_rating']}/5, {top['operations']} opérations : "
+                   f"complexité de {top['complexity']} sur 100, soit {scenarios.COMPLEXITY_POINTS[top['complexity_level']]} points de risque.")
+    with right:
+        st.markdown("**Comment les interfaces influent sur le score**")
+        st.markdown("Une interface relie la pièce à une autre. Plus une pièce en a, plus un changement ou une rupture se propage, car chaque pièce voisine doit être revérifiée : "
+                    f"les interfaces ajoutent jusqu'à **{scenarios.INTERFACE_POINTS[0][1]} points sur 100** au score.")
+        theme.table(["Interfaces avec d'autres pièces", "Points de risque", "Pièces"],
+                    [(label, points, sum(scenarios.interface_points(r["interfaces"]) == points for r in rows)) for _, points, label in scenarios.INTERFACE_POINTS], numeric=(1, 2))
+        top = max(rows, key=lambda r: r["interfaces"])
+        st.caption(f"Exemple : {top['name']}, {top['interfaces']} interfaces, soit {scenarios.interface_points(top['interfaces'])} points de risque.")
+
+
+def render_method(rows):
     st.markdown("##### Comment le score est calculé")
-    theme.note("<b>Score de risque = somme des points de 8 critères, de 0 à 100.</b> Plus il est élevé, plus la pièce peut arrêter la production. "
-               "Le premier critère pèse le plus : une pièce sans source de secours part déjà de 25 à 35 points.")
+    theme.note(f"<b>Score de risque = somme des points de {len(scenarios.CRITERIA)} critères, de 0 à 100.</b> Plus il est élevé, plus la pièce peut arrêter la production. "
+               "Le premier critère pèse le plus : une pièce sans source de secours part déjà de 20 à 30 points.")
     left, right = st.columns([7, 4], gap="medium")
     with left:
         theme.table(["Critère", "Max", "Barème"], [(c["label"], c["max"], c["scale"]) for c in scenarios.CRITERIA], numeric=(1,))
@@ -68,21 +98,22 @@ def render_method():
             "- Classe C : les points Sources et Remplacement sont divisés par 2 quand une seule source est qualifiée ou aucune alternative n'est en cours."
         )
         st.caption(CLASS_RULES)
+    render_influences(rows)
 
 
 def render_risk_table(model, rows):
     st.markdown("##### Tableau des risques par pièce")
     table = [{
         "Pièce": r["name"], "Criticité": r["level"], "Score": r["score"], "Raisons": " ; ".join(r["reasons"]), "Qualifiés / référencés": f"{r['sources_qualified']} / {r['sources_referenced']}",
-        "Origine": r["origin"], "Interdépendances": r["interfaces"], "Qté": r["quantity"], "Masse (kg)": round(r["mass_kg"], 3), "Volume (L)": round(r["volume_l"], 3), "Encombrement (mm)": r["envelope_mm"].replace("x", " × "),
+        "Origine": r["origin"], "Complexité": r["complexity"], "Interdépendances": r["interfaces"], "Qté": r["quantity"], "Masse (kg)": round(r["mass_kg"], 3),
         "Coût (€)": round(r["line_cost"], 2), "Part du coût": r["cost_share"], "Classe": r["class"],
     } for r in rows]
     ids = part_node_ids(model, [r["part_id"] for r in rows])
     st.dataframe(table, hide_index=True, width="stretch", height=420, key="ov_table", on_select=open_from_table("ov_table", ids), selection_mode="single-row",
                  column_config={
-                     "Score": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"), "Raisons": st.column_config.TextColumn(width="large"),
+                     "Score": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"), "Complexité": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"), "Raisons": st.column_config.TextColumn(width="large"),
                      "Part du coût": st.column_config.NumberColumn(format="percent"), "Masse (kg)": st.column_config.NumberColumn(format="localized"),
-                     "Volume (L)": st.column_config.NumberColumn(format="localized"), "Coût (€)": st.column_config.NumberColumn(format="localized"),
+                     "Coût (€)": st.column_config.NumberColumn(format="localized"),
                  })
     st.caption("Cochez une ligne pour ouvrir la fiche de la pièce.")
 
@@ -90,34 +121,25 @@ def render_risk_table(model, rows):
 # ------------------------------------------------------------------ Interdépendances
 
 
-def network_graph(model, rows):
-    """Réseau des interfaces : un nœud par pièce, coloré selon sa criticité."""
-
-    def quoted(value):
-        return '"' + str(value).replace('"', "'") + '"'
-
-    levels = {r["part_id"]: r["level"] for r in rows}
-    ink = {"Critique": "#ffffff", "Élevé": "#0b0b0b", "Modéré": "#0b0b0b", "Faible": "#ffffff"}
-    linked = {side for i in model.enrichment["interfaces"] if i["type"] != "study" for side in (i["first"], i["second"])}
-    lines = [
-        "graph {",
-        'layout=neato; overlap=false; splines=true; sep="+10"; bgcolor="transparent"; size="9,6"; pad=0.2;',
-        'node [shape=box, style="rounded,filled", fontname="Segoe UI", fontsize=10, color="#ffffff", margin="0.07,0.03", height=0.24];',
-        'edge [color="#a9a89f", penwidth=1];',
-    ]
-    for part_id in sorted(linked):
-        level = levels.get(part_id, "Faible")
-        lines.append(f'{quoted(part_id)} [label={quoted(model.node_label(part_id))}, fillcolor="{theme.LEVEL_COLORS[level]}", fontcolor="{ink[level]}"];')
-    for interface in model.enrichment["interfaces"]:
-        if interface["type"] != "study":
-            lines.append(f'{quoted(interface["first"])} -- {quoted(interface["second"])} [tooltip={quoted(model.interface_types[interface["type"]]["label"])}];')
-    lines.append("}")
-    return "\n".join(lines)
+def complexity_chart(rows):
+    """Une colonne par pièce, de la plus complexe à la plus simple."""
+    ranked = sorted(rows, key=lambda r: -r["complexity"])
+    names = [r["name"] for r in ranked]
+    fig = go.Figure(go.Bar(
+        x=names, y=[r["complexity"] for r in ranked], width=0.66,
+        marker=dict(color=[theme.COMPLEXITY_COLORS[r["complexity_level"]] for r in ranked], line=dict(width=0)),
+        hovertext=[f"<b>{r['complexity']} sur 100, {r['complexity_level'].lower()}</b><br>{escape(r['name'])}<br>{escape(r['process'])}<br>Procédé {r['process_rating']}/5, précision {r['precision_rating']}/5, {r['operations']} opérations" for r in ranked],
+        hoverinfo="text",
+    ))
+    theme.style_figure(fig, height=430, legend_visible=False, title="Complexité des pièces (score sur 100)")
+    fig.update_xaxes(type="category", tickmode="array", tickvals=names, ticktext=names, tickangle=-55, tickfont=dict(size=10))
+    fig.update_yaxes(range=[0, 100], dtick=25)
+    return fig
 
 
 def render_interdependencies(model, rows):
-    st.markdown("##### Interdépendances")
-    st.caption("Une interface relie deux pièces : si l'une change, l'autre doit être revérifiée. Les interfaces sont déduites des positions du XML ou supposées, la colonne Justification le précise.")
+    st.markdown("##### Interdépendances et complexité des pièces")
+    st.caption("Une interface relie deux pièces : si l'une change, l'autre doit être revérifiée. La complexité mesure la difficulté de fabrication de la pièce. Les deux entrent dans le score de risque.")
     ranked = sorted(rows, key=lambda r: -r["interfaces"])[:TOP_PARTS]
     left, right = st.columns([4, 7], gap="medium")
     with left:
@@ -125,13 +147,12 @@ def render_interdependencies(model, rows):
                          hover=[f"<b>{r['interfaces']} interfaces</b><br>{r['name']}" for r in ranked], height=430)
         theme.show(fig, key="ov_links")
     with right:
-        st.markdown("**Réseau des interfaces, coloré selon la criticité**")
-        st.graphviz_chart(network_graph(model, rows), width="stretch")
-        theme.legend({level: theme.LEVEL_COLORS[level] for level, _ in scenarios.LEVELS})
+        theme.show(complexity_chart(rows), key="ov_complexity")
+        theme.legend(theme.COMPLEXITY_COLORS)
     interfaces = [i for i in model.enrichment["interfaces"] if i["type"] != "study"]
     with st.expander(f"Liste des {len(interfaces)} interfaces"):
         st.dataframe([{
-            "Pièce A": model.node_label(i["first"]), "Pièce B": model.node_label(i["second"]), "Type": model.interface_types[i["type"]]["label"], "Description": i["note"], "Justification": i["evidence"],
+            "Pièce A": model.node_label(i["first"]), "Pièce B": model.node_label(i["second"]), "Type": model.interface_types[i["type"]]["label"], "Description": i["note"],
             "Essai à refaire": model.interface_types[i["type"]]["test"],
         } for i in interfaces], hide_index=True, width="stretch")
 
@@ -162,7 +183,7 @@ def supplier_map(model):
 def render_origin(model):
     conc = scenarios.concentration(model)
     st.markdown("##### Origine des fournisseurs")
-    st.caption("Taille selon les achats annuels, rouge pour une notation financière C. Fournisseurs fictifs.")
+    st.caption("Taille selon les achats annuels, rouge pour une notation financière C.")
     theme.show(supplier_map(model), key="ov_map")
     st.caption(" · ".join(f"{name} {pct(value / conc['total_spend'])}" for name, value in conc["by_country"][:7]))
 
@@ -173,7 +194,7 @@ def render(model):
     columns = st.columns(3)
     columns[0].metric("Composants critiques", kpis["critical_parts"], help="Score d'au moins 70, ou classe A ou B avec au plus un fournisseur qualifié.")
     columns[1].metric("Pièces mono-source", kpis["single_source_parts"], help="Pièces avec un seul fournisseur qualifié, ou aucun.")
-    columns[2].metric("Interdépendances", kpis["interfaces"], help="Interfaces fonctionnelles entre pièces, déduites des positions du XML ou supposées.")
+    columns[2].metric("Interdépendances", kpis["interfaces"], help="Interfaces fonctionnelles entre pièces.")
 
     left, right = st.columns([7, 5], gap="medium")
     with left:
@@ -183,7 +204,7 @@ def render(model):
         st.markdown("##### Détail du score d'une pièce")
         render_part_detail(model, rows)
 
-    render_method()
+    render_method(rows)
     render_risk_table(model, rows)
     render_interdependencies(model, rows)
     render_origin(model)
