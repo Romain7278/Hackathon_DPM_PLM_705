@@ -1,0 +1,15 @@
+__pycache__/
+
+# Clé API : ne jamais la publier
+.streamlit/secrets.toml
+
+# Configuration locale de l'outil
+.claude/
+
+# Prototype React remplacé par le dashboard Streamlit
+explorer/
+plm_data.json
+
+# Supports des organisateurs, non nécessaires au dashboard
+Hackathon dataset/*.pptx
+Hackathon dataset/*.mp4

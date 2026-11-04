@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --text:#0b0b0b; --text2:#52514e; --muted:#6c6b66; --line:#e1e0d9; --wash:#f2f1ed; --selected:#e4e3dc; --surface:#ffffff; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:transparent; color:var(--text); font:13px/1.4 "Source Sans Pro", "Source Sans 3", system-ui, "Segoe UI", sans-serif; }
+  button, input, select { font:inherit; color:inherit; }
+  button { background:none; border:0; padding:0; cursor:pointer; }
+  :focus-visible { outline:2px solid #1c5cab; outline-offset:1px; }
+  #app { display:flex; flex-direction:column; height:100vh; border:1px solid var(--line); border-radius:8px; background:var(--surface); overflow:hidden; }
+  .filters { display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; border-bottom:1px solid var(--line); align-items:center; }
+  .filters input[type=search] { flex:1 1 170px; min-width:120px; padding:5px 8px; border:1px solid #c3c2b7; border-radius:6px; background:#fff; }
+  .filters select { padding:4px 5px; border:1px solid #c3c2b7; border-radius:6px; background:#fff; max-width:120px; }
+  .filters label { display:inline-flex; gap:4px; align-items:center; color:var(--text2); white-space:nowrap; }
+  .bar { display:flex; justify-content:space-between; gap:8px; padding:5px 10px; font-size:12px; color:var(--text2); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .bar button { text-decoration:underline; text-decoration-color:#c3c2b7; text-underline-offset:2px; margin-left:8px; color:var(--text2); }
+  .head, .select { display:grid; grid-template-columns:minmax(0,1fr) 22px 66px 62px; column-gap:6px; align-items:center; }
+  .head { padding:4px 10px 4px 30px; font-size:11px; color:var(--muted); border-bottom:1px solid var(--line); }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .body { flex:1; min-height:0; overflow:auto; padding:3px 0 6px; }
+  .row { display:flex; align-items:stretch; padding-right:10px; }
+  .row:hover { background:var(--wash); }
+  .row.selected { background:var(--selected); }
+  .chev { flex:none; display:inline-flex; align-items:center; justify-content:center; width:20px; }
+  .chev i { width:7px; height:7px; border-right:1.5px solid var(--text2); border-bottom:1.5px solid var(--text2); transform:rotate(-45deg); transition:transform .1s; }
+  .chev.open i { transform:rotate(45deg); }
+  .select { flex:1; min-width:0; padding:3px 0; text-align:left; }
+  .name { overflow-wrap:anywhere; }
+  .name.assembly { font-weight:600; }
+  .qty { color:var(--muted); margin-left:5px; white-space:nowrap; }
+  .rev { color:var(--text2); font-size:12px; text-align:center; }
+  .badge { display:inline-block; font-size:10px; line-height:15px; padding:0 4px; border-radius:3px; white-space:nowrap; justify-self:start; color:#fff; }
+  .m-RELEASED { background:#0d366b; } .m-FROZEN { background:#1c5cab; } .m-IN_WORK { background:#3987e5; }
+  .m-PRIVATE { background:#b7d3f6; color:#0b0b0b; } .m-OBSOLETE { background:#d03b3b; }
+  .flags { white-space:nowrap; margin-left:5px; font-size:11px; }
+  .flag { margin-left:3px; color:var(--text2); }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:2px; vertical-align:0; }
+  .dot.err { background:#d03b3b; } .dot.warn { background:#fab219; box-shadow:inset 0 0 0 1px rgba(0,0,0,.25); }
+  mark { background:#fde7ad; color:inherit; border-radius:2px; }
+  .empty { padding:18px 12px; color:var(--text2); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="filters">
+    <input id="query" type="search" placeholder="Rechercher : nom, matériau, ID PLM…" aria-label="Rechercher un composant">
+    <select id="maturity" aria-label="Filtrer par maturité"></select>
+    <select id="family" aria-label="Filtrer par matériau"></select>
+    <label><input id="alerts" type="checkbox"> Alertes</label>
+  </div>
+  <div class="bar">
+    <span id="summary" aria-live="polite"></span>
+    <span><button id="expand">Tout déplier</button><button id="collapse">Tout replier</button></span>
+  </div>
+  <div class="head"><span>Composant</span><span>Rév.</span><span>Maturité</span><span class="num">Masse</span></div>
+  <div class="body" id="body"></div>
+</div>
+<script>
+const post = (type, data = {}) => window.parent.postMessage({ isStreamlitMessage: true, type, ...data }, "*");
+let tree = null, selected = null, lastSelected = null, height = 0;
+let expanded = new Set();
+let initialized = false;
+const $ = (id) => document.getElementById(id);
+
+const normalize = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[\s_-]/g, "").toLowerCase();
+const fmtKg = (v) => v.toLocaleString("fr-FR", { maximumFractionDigits: 3 }) + " kg";
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function fillSelect(select, label, values) {
+  const current = select.value;
+  select.replaceChildren();
+  const all = el("option", "", label);
+  all.value = "";
+  select.append(all);
+  values.forEach((value) => { const o = el("option", "", value); o.value = value; select.append(o); });
+  select.value = current;
+}
+
+function isFiltering() {
+  return $("query").value.trim() || $("maturity").value || $("family").value || $("alerts").checked;
+}
+
+// Un assemblage reste visible si l'un de ses enfants correspond ; le texte d'un assemblage ouvre tout son contenu.
+function computeVisible() {
+  const query = normalize($("query").value);
+  const maturity = $("maturity").value, family = $("family").value, alerts = $("alerts").checked;
+  const visible = new Set(), leaves = [];
+  const passes = (n) => (!maturity || n.maturity === maturity || n.ei_maturity === maturity) && (!family || n.family === family) && (!alerts || n.err + n.warn > 0);
+  const visit = (node, ancestorHit) => {
+    const hit = ancestorHit || !query || node.search.includes(query);
+    if (!node.assembly) {
+      if (hit && passes(node)) { visible.add(node.id); leaves.push(node); return true; }
+      return false;
+    }
+    let any = false;
+    node.children.forEach((child) => { if (visit(child, hit)) any = true; });
+    if (any || (hit && query && !maturity && !family && !alerts && node.search.includes(query))) { visible.add(node.id); return true; }
+    return false;
+  };
+  visit(tree, false);
+  return { visible, leaves };
+}
+
+function highlight(target, text) {
+  const needle = $("query").value.trim();
+  const index = needle ? text.toLowerCase().indexOf(needle.toLowerCase()) : -1;
+  if (index < 0) { target.append(text); return; }
+  target.append(text.slice(0, index), el("mark", "", text.slice(index, index + needle.length)), text.slice(index + needle.length));
+}
+
+function flagsFor(node) {
+  const flags = el("span", "flags");
+  const err = node.assembly ? node.sub_err : node.err;
+  const warn = node.assembly ? node.sub_warn : node.warn;
+  if (err) { const f = el("span", "flag"); f.title = `${err} alerte(s) bloquante(s)`; f.append(el("i", "dot err"), String(err)); flags.append(f); }
+  if (warn) { const f = el("span", "flag"); f.title = `${warn} point(s) d'attention`; f.append(el("i", "dot warn"), String(warn)); flags.append(f); }
+  return flags;
+}
+
+function renderRow(node, depth, open) {
+  const row = el("div", "row" + (node.id === selected ? " selected" : ""));
+  row.style.paddingLeft = (6 + depth * 12) + "px";
+  row.dataset.id = node.id;
+  row.setAttribute("role", "treeitem");
+  if (node.assembly) {
+    const chev = el("button", "chev" + (open ? " open" : ""));
+    chev.setAttribute("aria-expanded", open);
+    chev.setAttribute("aria-label", (open ? "Replier " : "Déplier ") + node.label);
+    chev.append(el("i"));
+    chev.onclick = () => { open ? expanded.delete(node.id) : expanded.add(node.id); renderBody(); };
+    row.append(chev);
+  } else {
+    row.append(el("span", "chev"));
+  }
+  const select = el("button", "select");
+  select.title = node.plm_name;
+  const name = el("span", "name" + (node.assembly ? " assembly" : ""));
+  highlight(name, node.label);
+  if (node.qty > 1) name.append(el("span", "qty", `× ${node.qty}`));
+  name.append(flagsFor(node));
+  select.append(name, el("span", "rev", node.rev), el("span", `badge m-${node.maturity}`, node.maturity), el("span", "num", fmtKg(node.mass)));
+  select.onclick = () => {
+    selected = node.id;
+    lastSelected = node.id;
+    post("streamlit:setComponentValue", { value: node.id, dataType: "json" });
+    renderBody();
+  };
+  row.append(select);
+  return row;
+}
+
+function renderBody() {
+  const body = $("body");
+  const scroll = body.scrollTop;
+  body.replaceChildren();
+  const filtering = isFiltering();
+  const { visible, leaves } = computeVisible();
+  const pieces = leaves.reduce((sum, leaf) => sum + leaf.pieces, 0);
+  const mass = leaves.reduce((sum, leaf) => sum + leaf.mass, 0);
+  const references = new Set(leaves.map((leaf) => leaf.part_id)).size;
+  $("summary").textContent = `${pieces} pièce${pieces > 1 ? "s" : ""} · ${references} référence${references > 1 ? "s" : ""} · ${fmtKg(Math.round(mass * 1000) / 1000)}`;
+  if (!visible.size) { body.append(el("div", "empty", "Aucun composant ne correspond à ces filtres.")); return; }
+  const walk = (node, depth) => {
+    if (!visible.has(node.id)) return;
+    const open = filtering || expanded.has(node.id);
+    body.append(renderRow(node, depth, open));
+    if (node.assembly && open) node.children.forEach((child) => walk(child, depth + 1));
+  };
+  walk(tree, 0);
+  body.scrollTop = scroll;
+}
+
+function revealSelected() {
+  // Une pièce ouverte depuis une autre vue doit rester visible : on ouvre ses parents.
+  const find = (node, path) => {
+    if (node.id === selected) return path;
+    for (const child of node.children) { const found = find(child, [...path, node.id]); if (found) return found; }
+    return null;
+  };
+  (find(tree, []) || []).forEach((id) => expanded.add(id));
+}
+
+function allAssemblies(node, out = []) { if (node.assembly) { out.push(node.id); node.children.forEach((c) => allAssemblies(c, out)); } return out; }
+
+window.addEventListener("message", (event) => {
+  if (event.data.type !== "streamlit:render") return;
+  const args = event.data.args;
+  tree = args.tree;
+  selected = args.selected;
+  if (!initialized) {
+    initialized = true;
+    expanded = new Set([tree.id, ...tree.children.map((c) => c.id)]);
+    fillSelect($("maturity"), "Maturité", args.maturities);
+    fillSelect($("family"), "Matériau", args.families);
+  }
+  if (args.height !== height) { height = args.height; post("streamlit:setFrameHeight", { height }); }
+  const external = selected !== lastSelected;
+  if (external) { revealSelected(); lastSelected = selected; }
+  renderBody();
+  if (external) { const row = document.querySelector(".row.selected"); if (row) row.scrollIntoView({ block: "nearest" }); }
+});
+
+["query", "maturity", "family", "alerts"].forEach((id) => $(id).addEventListener("input", renderBody));
+$("expand").onclick = () => { expanded = new Set(allAssemblies(tree)); renderBody(); };
+$("collapse").onclick = () => { expanded = new Set([tree.id]); renderBody(); };
+
+post("streamlit:componentReady", { apiVersion: 1 });
+</script>
+</body>
+</html>
