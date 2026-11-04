@@ -7,8 +7,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from plm import scenarios
+from plm.annotations import maturity_note, revision_history, supplier_note
 from plm.fmt import eur, kg, number, pct
-from plm.model import FAMILIES, normalize
+from plm.model import FAMILIES, QUALIFIED, normalize
 from plm.quality import INFO, MISSING, PARENT_CHILD, SEVERITY_ICONS, SEVERITY_RANK, control_findings, counts, field_completeness, parent_child_links
 from ui import theme
 from ui.state import EXPLORER_TREE, close_detail, open_from_table, select_node, selected_id
@@ -146,12 +147,14 @@ def select_child(key, ids):
 
 def render_suppliers(model, node):
     part = node.product
+    st.caption("Un fournisseur qualifié a déjà été validé pour fabriquer cette pièce. "
+               "Une modification de la pièce peut nécessiter une nouvelle validation.")
 
     def columns(link):
         supplier = model.suppliers[link["supplier"]]
-        return {"Fournisseur": supplier["name"], "Origine": f"{supplier['city']}, {supplier['country_name']}", "Part": link["share_pct"] / 100, "Prix (€)": link.get("unit_price_eur"), "Notation": supplier["financial_rating"]}
+        return {"Fournisseur": supplier["name"], "Qualifié": link['qualification'] in QUALIFIED, "Origine": f"{supplier['city']}, {supplier['country_name']}", "Part": link["share_pct"] / 100, "Prix (€)": link.get("unit_price_eur"), "Notation": supplier["financial_rating"]}
 
-    config = {"Part": st.column_config.NumberColumn(format="percent"), "Prix (€)": st.column_config.NumberColumn(format="localized")}
+    config = {"Qualifié": st.column_config.CheckboxColumn(help="Le fournisseur a déjà été validé pour fabriquer cette pièce."), "Part": st.column_config.NumberColumn(format="percent"), "Prix (€)": st.column_config.NumberColumn(format="localized")}
     if node.is_assembly:
         part_ids = sorted({leaf.part_id for leaf in node.leaves() if leaf.product.get("physical", True)})
         rows = [{"Pièce": model.node_label(part_id), **columns(link)} for part_id in part_ids for link in model.products[part_id]["sourcing"]]
@@ -166,8 +169,7 @@ def render_suppliers(model, node):
     qualified = len(model.qualified_links(part))
     if qualified <= 1:
         st.warning(f"Pièce critique côté achats : {qualified} fournisseur qualifié sur {len(part['sourcing'])} référencé(s).")
-    if part.get("sourcing_note"):
-        st.caption(part["sourcing_note"])
+    st.caption(supplier_note(model, part))
     st.dataframe([columns(link) for link in sorted(part["sourcing"], key=lambda l: -l["share_pct"])], hide_index=True, width="stretch", column_config=config)
     st.caption(f"Stock de sécurité : {part.get('safety_stock_days', 0)} jours ouvrés.")
 
@@ -194,19 +196,21 @@ def render_traceability(model, node):
     if part.get("sourcing"):
         rows.append(("Fournisseur(s)", ", ".join(escape(model.suppliers[l["supplier"]]["name"]) for l in model.active_links(part))))
     theme.key_values(rows)
+    st.caption(maturity_note(model, part))
 
     if not part["revisions"]:
         st.info("Historique de révision non renseigné.")
         return
     st.markdown("**Suivi de versions**")
+    st.caption("Résumés calculés par comparaison des états disponibles.")
     rows = []
     previous = None
-    for revision in part["revisions"]:
+    for revision in revision_history(part):
         mass = revision.get("mass_kg")
         rows.append({
-            "Rév.": revision["name"], "Date": revision["date"], "ECO": revision["eco"], "Motif": revision["reason"],
+            "Rév.": revision["name"], "Date": revision["date"], "ECO": revision["eco"], "Résumé calculé": revision["reason"],
             "Masse (kg)": mass, "Écart (kg)": round(mass - previous, 3) if previous is not None and mass is not None else None,
-            "Matériau": revision.get("material", part["material"] or ""),
+            "Matériau": revision.get("material"),
         })
         previous = mass
     st.dataframe(rows, hide_index=True, width="stretch", column_config={"Masse (kg)": st.column_config.NumberColumn(format="localized"), "Écart (kg)": st.column_config.NumberColumn(format="localized")})
@@ -401,6 +405,7 @@ def render_bom_tab(model):
             "Rév.": part["revision"],
             "Maturité": part["maturity"],
             "Fournisseurs": len(part["sourcing"]),
+            "Fournisseurs qualifiés": len(model.qualified_links(part)),
             "Interfaces": len(model.real_interfaces(part_id)),
             "Criticité": crit["level"] if crit else "Hors périmètre",
             "Alertes": alerts["Bloquant"] + alerts["Attention"],
@@ -460,7 +465,7 @@ def render_parent_child_section(model):
     st.markdown(f"##### {PARENT_CHILD}")
     theme.note("<b>Règle :</b> un parent FROZEN ou RELEASED ne peut pas être plus avancé que ses enfants directs, et un enfant OBSOLETE ne devrait plus être utilisé par un parent actif. "
                "Échelle de maturité : PRIVATE, IN_WORK, FROZEN, RELEASED.")
-    rows = [{"Parent": r["parent"], "Maturité du parent": r["parent_maturity"], "Enfant": r["child"], "Maturité de l'enfant": r["child_maturity"], "Écart (niveaux)": r["gap"], "Constat": f"🔴 {r['problem']}"} for r in issues]
+    rows = [{"Parent": r["parent"], "Maturité du parent": r["parent_maturity"], "Enfant": r["child"], "Maturité de l'enfant": r["child_maturity"], "Écart (niveaux)": r["gap"], "Constat": f"🔴 {r['message']}"} for r in issues]
     ids = [node_for_product(model, r["child_id"]).id for r in issues]
     st.dataframe(rows, hide_index=True, width="stretch", key="dq_links", on_select=open_from_table("dq_links", ids), selection_mode="single-row",
                  column_config={"Constat": st.column_config.TextColumn(width="medium")})
@@ -468,6 +473,7 @@ def render_parent_child_section(model):
 
 
 def render_quality_tab(model):
+    st.caption("Contrôles automatiques : champs, constats et alertes sont générés par les règles de l'application à partir des données courantes.")
     found = control_findings(model.findings)
     total = counts(found)
     links = parent_child_links(model)

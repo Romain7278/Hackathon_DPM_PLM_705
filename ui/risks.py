@@ -1,18 +1,18 @@
 """Onglet Risques et interdépendances : score de risque expliqué, relations entre pièces et origine des achats."""
 from html import escape
+from collections import Counter
 
 import plotly.graph_objects as go
 import streamlit as st
 
 from plm import scenarios
-from plm.fmt import compact_eur, number, pct
-from plm.model import COMPLEXITY_LEVELS, OPERATIONS_CEILING
+from plm.fmt import number
 from ui import theme
 from ui.state import open_from_table, open_part
 
 TOP_PARTS = 12
 CLASS_RULES = "Classe A : pièce vitale pour la fonction. Classe B : pièce importante. Classe C : pièce standard, facile à requalifier ailleurs."
-CRITERION_COLORS = [*theme.PALETTE, theme.NEUTRAL_BAR]  # 9 critères : le gris neutre complète les 8 teintes de la palette
+CRITERION_COLORS = [*theme.PALETTE, theme.NEUTRAL_BAR]
 
 
 def part_node_ids(model, part_ids):
@@ -32,7 +32,7 @@ def score_chart(rows):
         fig.add_bar(
             y=names, x=[c["points"] for c in cells], name=criterion["label"], orientation="h", width=0.66,
             marker=dict(color=CRITERION_COLORS[index], line=dict(color=theme.SURFACE, width=2)),
-            hovertext=[f"<b>{number(c['points'], 1)} points sur {c['max']}</b><br>{escape(criterion['label'])}<br>{escape(c['detail'])}" for c in cells], hoverinfo="text",
+            hovertext=[f"<b>{number(c['points'], 1)} points sur {number(c['max'], 2)}</b><br>{escape(criterion['label'])}<br>{escape(c['detail'])}" for c in cells], hoverinfo="text",
         )
     fig.add_scatter(y=names, x=[sum(b["points"] for b in r["breakdown"]) for r in top], text=[f"  {r['score']} · {r['level']}" for r in top], mode="text", textposition="middle right",
                     textfont=dict(color=theme.INK, size=12), showlegend=False, hoverinfo="skip", cliponaxis=False)
@@ -49,56 +49,22 @@ def render_part_detail(model, rows):
     part_id = st.selectbox("Pièce", list(by_id), key="risk_detail_part", format_func=lambda p: f"{by_id[p]['name']} ({by_id[p]['score']})")
     row = by_id[part_id]
     theme.badges([(f"Score {row['score']} sur 100", None), (row["level"], theme.LEVEL_COLORS[row["level"]]), (f"Classe {row['class']}", None), (f"{row['sources_qualified']} qualifié(s) sur {row['sources_referenced']}", None)])
-    theme.table(["Critère", "Points", "Max", "Justification"], [(b["label"], number(b["points"], 1), b["max"], b["detail"]) for b in row["breakdown"]], numeric=(1, 2))
+    theme.table(["Critère", "Points", "Max", "Justification"], [(b["label"], number(b["points"], 1), number(b["max"], 2), b["detail"]) for b in row["breakdown"]], numeric=(1, 2))
     st.caption(f"Niveau retenu : {row['level']}. {row['level_reason']}.")
     st.button("Ouvrir la fiche", key="risk_open_part", on_click=open_part, args=(model.nodes_by_part[part_id][0].id,))
 
 
-def render_influences(rows):
-    """Explique le poids de la complexité et des interfaces, avec la répartition réelle des pièces."""
-    left, right = st.columns(2, gap="medium")
-    with left:
-        st.markdown("**Comment la complexité de la pièce influe sur le score**")
-        st.markdown("Une pièce complexe demande un procédé rare, des tolérances serrées et beaucoup d'opérations. Elle est plus difficile à requalifier ailleurs et à relancer après un arrêt : "
-                    f"elle ajoute jusqu'à **{scenarios.COMPLEXITY_POINTS['Très élevée']} points sur 100** au score.")
-        st.markdown(f"Score de complexité sur 100 = procédé (40 points, note sur 5) + précision (30 points, note sur 5) + nombre d'opérations (30 points, plafonné à {OPERATIONS_CEILING}).")
-        table = []
-        previous = None
-        for level, threshold in COMPLEXITY_LEVELS:
-            bounds = f"{threshold} ou plus" if previous is None else f"{threshold} à {previous - 1}" if threshold else f"Moins de {previous}"
-            table.append((level, bounds, scenarios.COMPLEXITY_POINTS[level], sum(r["complexity_level"] == level for r in rows)))
-            previous = threshold
-        theme.table(["Complexité", "Score de complexité", "Points de risque", "Pièces"], table, numeric=(2, 3))
-        top = max(rows, key=lambda r: r["complexity"])
-        st.caption(f"Exemple : {top['name']}, procédé {top['process_rating']}/5, précision {top['precision_rating']}/5, {top['operations']} opérations : "
-                   f"complexité de {top['complexity']} sur 100, soit {scenarios.COMPLEXITY_POINTS[top['complexity_level']]} points de risque.")
-    with right:
-        st.markdown("**Comment les interfaces influent sur le score**")
-        st.markdown("Une interface relie la pièce à une autre. Plus une pièce en a, plus un changement ou une rupture se propage, car chaque pièce voisine doit être revérifiée : "
-                    f"les interfaces ajoutent jusqu'à **{scenarios.INTERFACE_POINTS[0][1]} points sur 100** au score.")
-        theme.table(["Interfaces avec d'autres pièces", "Points de risque", "Pièces"],
-                    [(label, points, sum(scenarios.interface_points(r["interfaces"]) == points for r in rows)) for _, points, label in scenarios.INTERFACE_POINTS], numeric=(1, 2))
-        top = max(rows, key=lambda r: r["interfaces"])
-        st.caption(f"Exemple : {top['name']}, {top['interfaces']} interfaces, soit {scenarios.interface_points(top['interfaces'])} points de risque.")
-
-
 def render_method(rows):
     st.markdown("##### Comment le score est calculé")
-    theme.note(f"<b>Score de risque = somme des points de {len(scenarios.CRITERIA)} critères, de 0 à 100.</b> Plus il est élevé, plus la pièce peut arrêter la production. "
-               "Le premier critère pèse le plus : une pièce sans source de secours part déjà de 20 à 30 points.")
-    left, right = st.columns([7, 4], gap="medium")
-    with left:
-        theme.table(["Critère", "Max", "Barème"], [(c["label"], c["max"], c["scale"]) for c in scenarios.CRITERIA], numeric=(1,))
-    with right:
-        theme.table(["Niveau", "Score"], [(name, f"{threshold} ou plus" if threshold else "Moins de 25") for name, threshold in scenarios.LEVELS])
-        st.markdown(
-            "**Règles qui s'ajoutent au score**\n"
-            "- Classe A ou B avec au plus un fournisseur qualifié : toujours **Critique**, quel que soit le score.\n"
-            "- Classe C avec au plus un fournisseur qualifié : au moins **Élevé**.\n"
-            "- Classe C : les points Sources et Remplacement sont divisés par 2 quand une seule source est qualifiée ou aucune alternative n'est en cours."
-        )
-        st.caption(CLASS_RULES)
-    render_influences(rows)
+    st.markdown("**6 critères de même poids : chacun vaut au maximum 16,67 points.** "
+                "Les sous-critères combinés sont normalisés puis moyennés. Le total est arrondi sur 100.")
+    theme.table(["Critère", "Maximum"], [(c["label"], "16,67 pts") for c in scenarios.CRITERIA])
+    st.caption("Faible < 25 · Modéré 25–44 · Élevé 45–69 · Critique ≥ 70. "
+               "Avec au plus une source qualifiée : classe A/B toujours critique, classe C au moins élevée.")
+    with st.expander("Voir les barèmes"):
+        theme.table(["Critère", "Poids", "Barème"], [(c["label"], "1/6", c["scale"]) for c in scenarios.CRITERIA])
+        st.caption(CLASS_RULES + " La complexité combine procédé (40 %), précision (30 %) et opérations (30 %). "
+                   "Dans un scénario, le changement technique augmente le critère Criticité intrinsèque, plafonné à 16,67 points.")
 
 
 def render_risk_table(model, rows):
@@ -167,8 +133,8 @@ def supplier_map(model):
     fig = go.Figure()
     fig.add_trace(go.Scattergeo(
         lat=[r["lat"] for r in active], lon=[r["lon"] for r in active], name="Fournisseur actif", mode="markers",
-        marker=dict(size=[max(8, (r["spend_annual"] / 1e6) ** 0.5 * 12) for r in active], color=[theme.LEVEL_COLORS["Critique"] if r["rating"] == "C" else theme.SERIES[0] for r in active], line=dict(color=theme.SURFACE, width=2), opacity=0.9),
-        hovertext=[f"<b>{compact_eur(r['spend_annual'])} par an</b><br>{r['supplier']}<br>{r['city']}, {r['country']}<br>{r['active_parts']} pièce(s), notation {r['rating']}" for r in active], hoverinfo="text",
+        marker=dict(size=12, color=[theme.LEVEL_COLORS["Critique"] if r["rating"] == "C" else theme.SERIES[0] for r in active], line=dict(color=theme.SURFACE, width=2), opacity=0.9),
+        hovertext=[f"<b>{r['supplier']}</b><br>{r['city']}, {r['country']}<br>{r['active_parts']} pièce(s), notation {r['rating']}" for r in active], hoverinfo="text",
     ))
     fig.add_trace(go.Scattergeo(
         lat=[r["lat"] for r in candidates], lon=[r["lon"] for r in candidates], name="Candidat non actif", mode="markers",
@@ -181,11 +147,11 @@ def supplier_map(model):
 
 
 def render_origin(model):
-    conc = scenarios.concentration(model)
+    countries = Counter(r["country"] for r in scenarios.supplier_table(model) if r["active_parts"])
     st.markdown("##### Origine des fournisseurs")
-    st.caption("Taille selon les achats annuels, rouge pour une notation financière C.")
+    st.caption("Fournisseurs actifs en couleur ; rouge pour une notation financière C. Candidats en gris.")
     theme.show(supplier_map(model), key="ov_map")
-    st.caption(" · ".join(f"{name} {pct(value / conc['total_spend'])}" for name, value in conc["by_country"][:7]))
+    st.caption(" · ".join(f"{name} : {count} fournisseur(s) actif(s)" for name, count in countries.most_common()))
 
 
 def render(model):
@@ -201,10 +167,13 @@ def render(model):
         st.markdown(f"##### Les {TOP_PARTS} composants les plus critiques, détail du score")
         theme.show(score_chart(rows), key="ov_crit")
     with right:
+        render_method(rows)
+
+    detail, origin = st.columns(2, gap="medium")
+    with detail:
         st.markdown("##### Détail du score d'une pièce")
         render_part_detail(model, rows)
-
-    render_method(rows)
+    with origin:
+        render_origin(model)
     render_risk_table(model, rows)
     render_interdependencies(model, rows)
-    render_origin(model)

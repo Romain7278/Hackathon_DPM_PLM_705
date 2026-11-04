@@ -2,8 +2,9 @@
 
 Conservé de l'export d'origine : structure, ID, noms, révisions courantes, masses, matériaux, positions.
 Simulé pour les scénarios : maturités, dates, propriétaires, descriptions manquantes et toute la
-section ext:Enrichment (coûts, fournisseurs, historique, interfaces, complexité, options d'allègement, scénarios).
-Les fournisseurs et les événements sont fictifs ; les prix sont des hypothèses calées sur des cours publics.
+section ext:Enrichment (coûts, fournisseurs, états historiques, interfaces, fabrication, options d'allègement).
+Les notes fournisseurs, constats et motifs historiques sont calculés dans l'application.
+Les fournisseurs sont fictifs ; les prix sont des hypothèses calées sur des cours publics.
 
 Usage : python enrich_xml.py
 """
@@ -24,7 +25,6 @@ PROGRAM = {
     "referenceDate": "2026-10-14",
     "annualVolume": 48000,
     "productionWeeks": 48,
-    "weeklyDemand": 1000,
     "workingDaysPerWeek": 5,
     "sopDate": "2027-09-06",
     "releaseGateDate": "2027-03-01",
@@ -36,7 +36,6 @@ PROGRAM = {
     "inventoryCarryingPct": 8,
     "massTargetKg": 95.0,
     "lightweightValueEurKg": 8.0,
-    "eurUsd": 1.14,
 }
 
 # Al et Cu : calés sur les cours publics d'octobre 2026 (prime Europe et conversion incluses).
@@ -109,8 +108,8 @@ def link(supplier, role, share, price, lead, transit, capacity, qualification, p
     return row
 
 
-def rev(name, date, eco, reason, mass=None, material=None):
-    row = dict(name=name, date=date, eco=eco, reason=reason)
+def rev(name, date, eco, mass=None, material=None):
+    row = dict(name=name, date=date, eco=eco)
     if mass is not None:
         row["massKg"] = mass
     if material:
@@ -132,65 +131,62 @@ PARTS = {
     "ID_3": dict(
         description="Roulement arrière de l'arbre rapide, hybride céramique isolé (courants d'arbre).",
         criticality="A", safetyStockDays=15, usageKg=0.8, conversionEur=30.64,
-        maturityDate="2026-07-07", plannedRelease="2026-12-15", blocking="Validation de l'isolation électrique en cours chez le fournisseur.",
-        sourcingNote="Variante hybride céramique propre à Naniwa : aucune alternative référencée.",
+        maturityDate="2026-07-07", plannedRelease="2026-12-15",
         sourcing=[link("SUP-17", "PRIMARY", 100, 32.0, 63, 42, 2000, "APPROVED", "2026-05-20", contract_end="2027-12-31")],
-        revisions=[rev("A", "2025-02-18", "ECO-0114", "Création : roulement hybride céramique 6209.", 0.55)],
+        revisions=[rev("A", "2025-02-18", "ECO-0114", 0.55)],
     ),
     "ID_5": dict(
         description="High Speed Shaft",
         criticality="A", safetyStockDays=8, usageKg=8.4, conversionEur=46.0,
-        maturityDate="2026-06-23", plannedRelease="2026-12-10", blocking="Rapport d'endurance à finaliser.",
+        maturityDate="2026-06-23", plannedRelease="2026-12-10",
         sourcing=[
             link("SUP-14", "PRIMARY", 100, 58.6, 20, 2, 1200, "APPROVED", "2026-06-10", contract_end="2027-06-30"),
             link("SUP-11", "CANDIDATE", 0, 63.5, 18, 2, 800, "NOT_STARTED", requal=26, ramp=4, switching=240000),
         ],
         revisions=[
-            rev("A", "2025-02-11", "ECO-0112", "Création : arbre plein, cannelures DIN 5480.", 7.3),
-            rev("B", "2025-11-18", "ECO-0487", "Réduction de diamètre hors portées, tenue en fatigue vérifiée.", 6.8),
+            rev("A", "2025-02-11", "ECO-0112", 7.3),
+            rev("B", "2025-11-18", "ECO-0487", 6.8),
         ],
         options=[option("HSH-HOLLOW", "Arbre creux (forgeage orbital)", "DESIGN", 0.68, 9.0, 20, 210000, "HIGH", "Aucun : diamètres extérieurs inchangés.", "Faible : solution courante sur moteurs de traction. Réduit aussi l'inertie.")],
     ),
     "ID_7": dict(
         description="Chemise de refroidissement extrudée à canaux hélicoïdaux, soudée FSW.",
         criticality="A", safetyStockDays=10, usageKg=4.1, conversionEur=35.05,
-        maturityDate="2026-07-22", plannedRelease="2027-02-12", blocking="Micro-fuites sur soudure FSW à 3 bar : plan d'action en cours chez Nordprofil.",
-        sourcingNote="Procédé d'extrusion et de soudage propre au fournisseur : aucune alternative référencée.",
+        maturityDate="2026-07-22", plannedRelease="2027-02-12",
         sourcing=[link("SUP-10", "PRIMARY", 100, 49.4, 28, 6, 1150, "CONDITIONAL", "2027-02-05", ramp=3, contract_end="2027-09-30", clause="INDEX_Q")],
         revisions=[
-            rev("A", "2025-03-04", "ECO-0130", "Création : chemise extrudée à canaux hélicoïdaux.", 3.2),
-            rev("B", "2026-07-22", "ECO-0861", "Épaississement de la zone FSW après micro-fuites à 3 bar.", 3.4),
+            rev("A", "2025-03-04", "ECO-0130", 3.2),
+            rev("B", "2026-07-22", "ECO-0861", 3.4),
         ],
         options=[option("COOL-THIN", "Parois minces et canal intégré", "DESIGN", 0.85, 2.0, 20, 90000, "MEDIUM", "Aucun : diamètre extérieur inchangé.", "Moyen : à revalider en pression à cause des micro-fuites déjà constatées.")],
     ),
     "ID_10": dict(
         physical="false", criticality="C",
         maturityDate="2025-01-20",
-        revisions=[rev("A", "2025-01-20", "ECO-0096", "Création : secteur de dent pour le maillage éléments finis.", 0.12)],
+        revisions=[rev("A", "2025-01-20", "ECO-0096", 0.12)],
         options=[option("DATA-TOOTH", "Retirer de la nomenclature (géométrie d'étude)", "DATA", 0.0, 0.0, 0, 0, "HIGH", "Aucun.", "Aucun : correction de données, pas de pièce physique supprimée.")],
     ),
     "ID_12": dict(
         physical="false", criticality="C",
         maturityDate="2025-09-30",
         revisions=[
-            rev("A", "2025-01-20", "ECO-0098", "Création : bobine unitaire pour le maillage.", 0.18),
-            rev("B", "2025-09-30", "ECO-0402", "Mise à jour de la section du conducteur.", 0.16),
+            rev("A", "2025-01-20", "ECO-0098", 0.18),
+            rev("B", "2025-09-30", "ECO-0402", 0.16),
         ],
         options=[option("DATA-COIL", "Retirer de la nomenclature (géométrie d'étude)", "DATA", 0.0, 0.0, 0, 0, "HIGH", "Aucun.", "Aucun : correction de données, à confirmer avec l'OEM.")],
     ),
     "ID_14": dict(
         criticality="A", safetyStockDays=5, usageKg=31.0, conversionEur=46.7,
-        maturityDate="2026-06-12", plannedRelease="2027-01-20", blocking="Essais de pertes fer sur la révision C à clôturer.",
-        sourcingNote="Matrice progressive propriété de Voltaron. Slovlam est en cours de PPAP, Yangtze seulement identifié.",
+        maturityDate="2026-06-12", plannedRelease="2027-01-20",
         sourcing=[
             link("SUP-01", "PRIMARY", 100, 118.0, 15, 2, 1300, "APPROVED", "2026-04-15", contract_end="2027-12-31", clause="INDEX_Q"),
             link("SUP-02", "CANDIDATE", 0, 111.0, 18, 3, 700, "IN_PROGRESS", "2027-01-29", requal=12, ramp=3, switching=420000, clause="INDEX_Q"),
             link("SUP-03", "CANDIDATE", 0, 96.0, 60, 42, 1500, "NOT_STARTED", requal=38, ramp=6, switching=650000, clause="INDEX_Q"),
         ],
         revisions=[
-            rev("A", "2025-01-20", "ECO-0097", "Création : tôles M270-35A.", 22.4, "Electrical steel M270-35A (laminated)"),
-            rev("B", "2025-08-12", "ECO-0366", "Passage de M270-35A à M235-35A pour réduire les pertes fer.", 22.4),
-            rev("C", "2026-03-03", "ECO-0655", "Réduction de la hauteur de culasse de 2 mm.", 21.5),
+            rev("A", "2025-01-20", "ECO-0097", 22.4, "Electrical steel M270-35A (laminated)"),
+            rev("B", "2025-08-12", "ECO-0366", 22.4),
+            rev("C", "2026-03-03", "ECO-0655", 21.5),
         ],
         options=[
             option("CORE-YOKE", "Culasse amincie et encoches optimisées", "DESIGN", 0.96, 0.0, 26, 180000, "MEDIUM", "Aucun : diamètre extérieur inchangé.", "Moyen : saturation magnétique à revérifier par simulation."),
@@ -200,15 +196,15 @@ PARTS = {
     "ID_16": dict(
         description="Bobinage en épingles (hairpin), 8 conducteurs par encoche.",
         criticality="A", safetyStockDays=6, usageKg=7.7, conversionEur=44.0,
-        maturityDate="2026-09-08", plannedRelease="2027-03-19", blocking="Refonte hairpin (pertes AC) : essais thermiques en cours, date après le jalon.",
+        maturityDate="2026-09-08", plannedRelease="2027-03-19",
         sourcing=[
             link("SUP-04", "PRIMARY", 70, 159.5, 12, 2, 900, "CONDITIONAL", "2027-02-26", contract_end="2027-12-31", clause="INDEX_M"),
             link("SUP-05", "SECONDARY", 30, 151.0, 20, 5, 450, "CONDITIONAL", "2027-03-05", ramp=3, contract_end="2027-06-30", clause="INDEX_M"),
             link("SUP-06", "CANDIDATE", 0, 156.0, 16, 4, 500, "IN_PROGRESS", "2027-02-12", requal=14, ramp=4, switching=190000, clause="INDEX_M"),
         ],
         revisions=[
-            rev("A", "2025-01-20", "ECO-0099", "Création : bobinage en fil rond.", 7.9),
-            rev("B", "2026-09-08", "ECO-0912", "Passage en épingles (hairpin), 8 conducteurs par encoche, pour réduire les pertes AC.", 7.2),
+            rev("A", "2025-01-20", "ECO-0099", 7.9),
+            rev("B", "2026-09-08", "ECO-0912", 7.2),
         ],
         options=[option("COIL-AL", "Épingles en aluminium", "MATERIAL", 0.50, -84.0, 78, 1600000, "LOW", "Conflit : section à multiplier par 1,64, soit stator plus long de 40 mm ou plus large de 12 mm.", "Élevé : rendement en baisse d'environ 1,2 point, refonte électromagnétique complète.", "Aluminium wire EN AW-1370 (enamelled)")],
     ),
@@ -221,8 +217,8 @@ PARTS = {
             link("SUP-19", "SECONDARY", 25, 24.8, 35, 12, 500, "APPROVED", "2026-02-05", ramp=3, contract_end="2027-06-30", clause="INDEX_Q"),
         ],
         revisions=[
-            rev("A", "2025-02-25", "ECO-0121", "Création du boîtier.", 3.8),
-            rev("B", "2025-10-07", "ECO-0431", "Allègement du voile et nervures de renfort.", 3.6),
+            rev("A", "2025-02-25", "ECO-0121", 3.8),
+            rev("B", "2025-10-07", "ECO-0431", 3.6),
         ],
         options=[option("DIFF-ADI", "Fonte ADI et parois réduites", "MATERIAL", 0.88, 2.5, 20, 70000, "MEDIUM", "Aucun.", "Moyen : traitement thermique supplémentaire, usinage plus difficile.", "Austempered ductile iron ADI")],
     ),
@@ -233,7 +229,7 @@ PARTS = {
             link("SUP-25", "PRIMARY", 80, 4.0, 15, 2, 1400, "APPROVED", "2025-11-14", contract_end="2027-12-31"),
             link("SUP-21", "SECONDARY", 20, 3.8, 18, 2, 500, "APPROVED", "2025-11-28", contract_end="2027-12-31"),
         ],
-        revisions=[rev("A", "2025-03-04", "ECO-0124", "Création de l'axe de satellites.", 0.35)],
+        revisions=[rev("A", "2025-03-04", "ECO-0124", 0.35)],
     ),
     "ID_24": dict(
         description="Satellite conique du différentiel.",
@@ -243,7 +239,7 @@ PARTS = {
             link("SUP-11", "PRIMARY", 70, 8.4, 30, 2, 1800, "APPROVED", "2025-11-20", contract_end="2027-06-30"),
             link("SUP-12", "SECONDARY", 30, 8.0, 32, 3, 1200, "APPROVED", "2025-12-02", ramp=3, contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-03-04", "ECO-0125", "Création du satellite conique.", 0.55)],
+        revisions=[rev("A", "2025-03-04", "ECO-0125", 0.55)],
     ),
     "ID_26": dict(
         description="Planétaire du différentiel, côté gauche et côté droit.",
@@ -253,7 +249,7 @@ PARTS = {
             link("SUP-11", "PRIMARY", 70, 12.5, 30, 2, 1800, "APPROVED", "2025-11-20", contract_end="2027-06-30"),
             link("SUP-12", "SECONDARY", 30, 11.9, 32, 3, 1200, "APPROVED", "2025-12-02", ramp=3, contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-03-04", "ECO-0126", "Création du planétaire.", 0.9)],
+        revisions=[rev("A", "2025-03-04", "ECO-0126", 0.9)],
     ),
     "ID_30": dict(
         description="Roulement de l'arbre rapide, côté extérieur du réducteur.",
@@ -263,7 +259,7 @@ PARTS = {
             link("SUP-15", "PRIMARY", 60, 17.5, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
             link("SUP-16", "SECONDARY", 40, 18.0, 21, 2, 1200, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-02-18", "ECO-0115", "Création : roulement catalogue.", 0.6)],
+        revisions=[rev("A", "2025-02-18", "ECO-0115", 0.6)],
     ),
     "ID_32": dict(
         description="Roulement de l'arbre rapide, côté moteur.",
@@ -273,7 +269,7 @@ PARTS = {
             link("SUP-15", "PRIMARY", 60, 15.0, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
             link("SUP-16", "SECONDARY", 40, 15.4, 21, 2, 1200, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-02-18", "ECO-0116", "Création : roulement catalogue.", 0.5)],
+        revisions=[rev("A", "2025-02-18", "ECO-0116", 0.5)],
     ),
     "ID_34": dict(
         description="Roulement de sortie, côté couvercle (dans le logement de roulement).",
@@ -284,7 +280,7 @@ PARTS = {
             link("SUP-15", "SECONDARY", 30, 21.6, 25, 4, 900, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
             link("SUP-17", "CANDIDATE", 0, 19.5, 63, 42, 1500, "IN_PROGRESS", "2027-01-15", requal=10, ramp=4, switching=45000),
         ],
-        revisions=[rev("A", "2025-02-18", "ECO-0117", "Création : roulement catalogue.", 1.4)],
+        revisions=[rev("A", "2025-02-18", "ECO-0117", 1.4)],
     ),
     "ID_36": dict(
         description="Roulement de sortie, côté moteur.",
@@ -294,7 +290,7 @@ PARTS = {
             link("SUP-16", "PRIMARY", 70, 19.0, 21, 2, 1300, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
             link("SUP-15", "SECONDARY", 30, 19.5, 25, 4, 900, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-02-18", "ECO-0118", "Création : roulement catalogue.", 1.2)],
+        revisions=[rev("A", "2025-02-18", "ECO-0118", 1.2)],
     ),
     "ID_38": dict(
         description="Roulement de l'arbre intermédiaire, côté couvercle.",
@@ -304,7 +300,7 @@ PARTS = {
             link("SUP-15", "PRIMARY", 60, 16.0, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
             link("SUP-16", "SECONDARY", 40, 16.4, 21, 2, 1200, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-02-18", "ECO-0119", "Création : roulement catalogue.", 0.9)],
+        revisions=[rev("A", "2025-02-18", "ECO-0119", 0.9)],
     ),
     "ID_40": dict(
         description="Roulement de l'arbre intermédiaire, côté moteur.",
@@ -314,7 +310,7 @@ PARTS = {
             link("SUP-15", "PRIMARY", 60, 14.5, 25, 4, 1500, "APPROVED", "2025-10-14", contract_end="2027-06-30"),
             link("SUP-16", "SECONDARY", 40, 14.9, 21, 2, 1200, "APPROVED", "2025-10-21", contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-02-18", "ECO-0120", "Création : roulement catalogue.", 0.8)],
+        revisions=[rev("A", "2025-02-18", "ECO-0120", 0.8)],
     ),
     "ID_42": dict(
         description="Pignon d'entrée, 1er étage, sur l'arbre rapide.",
@@ -324,20 +320,20 @@ PARTS = {
             link("SUP-11", "PRIMARY", 70, 25.0, 30, 2, 1300, "APPROVED", "2025-12-16", contract_end="2027-06-30"),
             link("SUP-12", "SECONDARY", 30, 23.0, 30, 3, 800, "APPROVED", "2026-01-13", ramp=3, contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-02-03", "ECO-0104", "Création : pignon d'entrée, 1er étage.", 1.3)],
+        revisions=[rev("A", "2025-02-03", "ECO-0104", 1.3)],
     ),
     "ID_44": dict(
         description="Roue du 1er étage, sur l'arbre intermédiaire.",
         criticality="A", safetyStockDays=8, usageKg=5.4, conversionEur=38.98,
-        maturityDate="2026-05-26", plannedRelease="2026-12-18", blocking="Essai NVH final prévu en décembre.",
+        maturityDate="2026-05-26", plannedRelease="2026-12-18",
         sourcing=[
             link("SUP-11", "PRIMARY", 70, 46.0, 30, 2, 900, "APPROVED", "2026-05-12", contract_end="2027-06-30"),
             link("SUP-12", "SECONDARY", 30, 43.5, 32, 3, 500, "APPROVED", "2026-05-19", ramp=3, contract_end="2027-06-30"),
         ],
         revisions=[
-            rev("A", "2025-02-03", "ECO-0105", "Création : roue du 1er étage.", 4.2),
-            rev("B", "2025-09-09", "ECO-0395", "Déport de denture modifié pour réduire le bruit.", 4.0),
-            rev("C", "2026-04-14", "ECO-0702", "Voile allégé.", 3.9),
+            rev("A", "2025-02-03", "ECO-0105", 4.2),
+            rev("B", "2025-09-09", "ECO-0395", 4.0),
+            rev("C", "2026-04-14", "ECO-0702", 3.9),
         ],
         options=[option("GEARC-WEB", "Voile allégé par perçages", "DESIGN", 0.90, 1.6, 24, 60000, "MEDIUM", "Aucun.", "Moyen : essai NVH et tenue du voile à refaire.")],
     ),
@@ -350,39 +346,38 @@ PARTS = {
             link("SUP-12", "SECONDARY", 30, 26.5, 32, 3, 500, "APPROVED", "2025-12-09", ramp=3, contract_end="2027-06-30"),
         ],
         revisions=[
-            rev("A", "2025-02-03", "ECO-0106", "Création : pignon du 2e étage.", 1.7),
-            rev("B", "2025-09-09", "ECO-0396", "Bombé de denture ajusté après simulation.", 1.6),
+            rev("A", "2025-02-03", "ECO-0106", 1.7),
+            rev("B", "2025-09-09", "ECO-0396", 1.6),
         ],
     ),
     "ID_48": dict(
         description="Couronne du 2e étage, boulonnée sur le boîtier de différentiel.",
         criticality="A", safetyStockDays=8, usageKg=10.4, conversionEur=57.98,
-        maturityDate="2026-09-22", plannedRelease="2027-02-26", blocking="Micro-géométrie reprise après essais NVH : nouvelle campagne au banc en cours.",
-        sourcingNote="Moravia et Deccan sont à qualifier sur la révision D.",
+        maturityDate="2026-09-22", plannedRelease="2027-02-26",
         sourcing=[
             link("SUP-11", "PRIMARY", 100, 71.5, 30, 2, 1100, "CONDITIONAL", "2027-02-19", contract_end="2027-06-30"),
             link("SUP-12", "CANDIDATE", 0, 67.0, 32, 3, 700, "IN_PROGRESS", "2027-02-26", requal=16, ramp=4, switching=210000),
             link("SUP-13", "CANDIDATE", 0, 60.0, 65, 35, 1200, "NOT_STARTED", requal=30, ramp=6, switching=280000),
         ],
         revisions=[
-            rev("A", "2025-02-03", "ECO-0107", "Création : couronne du 2e étage.", 7.9),
-            rev("B", "2025-09-09", "ECO-0397", "Correction d'hélice.", 7.7),
-            rev("C", "2026-02-17", "ECO-0634", "Perçages d'allègement du voile.", 7.5),
-            rev("D", "2026-09-22", "ECO-0931", "Micro-géométrie reprise après essais NVH (raie d'engrènement).", 7.4),
+            rev("A", "2025-02-03", "ECO-0107", 7.9),
+            rev("B", "2025-09-09", "ECO-0397", 7.7),
+            rev("C", "2026-02-17", "ECO-0634", 7.5),
+            rev("D", "2026-09-22", "ECO-0931", 7.4),
         ],
         options=[option("GEARD-WEB", "Voile aminci et perçages supplémentaires", "DESIGN", 0.88, 3.2, 24, 110000, "MEDIUM", "Aucun.", "Moyen : révision D encore en essai NVH, à enchaîner avec la campagne en cours.")],
     ),
     "ID_50": dict(
         description="Arbre intermédiaire.",
         criticality="A", safetyStockDays=8, usageKg=4.6, conversionEur=38.02,
-        maturityDate="2026-06-02", plannedRelease="2026-12-18", blocking="Attente de la clôture de l'essai NVH du 1er étage.",
+        maturityDate="2026-06-02", plannedRelease="2026-12-18",
         sourcing=[
             link("SUP-11", "PRIMARY", 100, 44.0, 30, 2, 1300, "APPROVED", "2026-05-12", contract_end="2027-06-30"),
             link("SUP-14", "CANDIDATE", 0, 46.5, 22, 2, 800, "NOT_STARTED", requal=20, ramp=4, switching=150000),
         ],
         revisions=[
-            rev("A", "2025-02-10", "ECO-0110", "Création de l'arbre intermédiaire.", 3.6),
-            rev("B", "2025-10-21", "ECO-0450", "Épaulement de roulement renforcé, section allégée.", 3.4),
+            rev("A", "2025-02-10", "ECO-0110", 3.6),
+            rev("B", "2025-10-21", "ECO-0450", 3.4),
         ],
         options=[option("ISH-HOLLOW", "Arbre creux", "DESIGN", 0.75, 6.5, 22, 140000, "MEDIUM", "Aucun.", "Moyen : emmanchement des pignons à revalider.")],
     ),
@@ -390,22 +385,20 @@ PARTS = {
         description="Joint à lèvre FKM haute vitesse de l'arbre rapide.",
         criticality="A", safetyStockDays=20, usageKg=0.03, conversionEur=7.36,
         maturityDate="2026-03-24",
-        sourcingNote="Lèvre haute vitesse validée uniquement chez Elastotec : aucune alternative référencée.",
         sourcing=[link("SUP-23", "PRIMARY", 100, 8.5, 30, 2, 1500, "APPROVED", "2026-03-10", contract_end="2027-12-31")],
-        revisions=[rev("A", "2025-04-01", "ECO-0156", "Création : joint à lèvre FKM haute vitesse.", 0.06)],
+        revisions=[rev("A", "2025-04-01", "ECO-0156", 0.06)],
     ),
     "ID_55": dict(
         description="Demi-carter gauche du réducteur, porte les roulements côté couvercle.",
         criticality="A", safetyStockDays=6, usageKg=9.8, conversionEur=38.0,
-        maturityDate="2026-06-30", modified="2026-08-19", plannedRelease="2027-01-29", blocking="Modifiée après le gel sans nouvelle révision : à régulariser.",
-        sourcingNote="Moule HPDC propriété de Garda. Bohemia est en cours de PPAP avec un second moule à financer.",
+        maturityDate="2026-06-30", modified="2026-08-19", plannedRelease="2027-01-29",
         sourcing=[
             link("SUP-07", "PRIMARY", 100, 66.9, 21, 3, 1200, "APPROVED", "2026-06-16", contract_end="2028-03-31", clause="INDEX_Q"),
             link("SUP-08", "CANDIDATE", 0, 70.5, 24, 3, 800, "IN_PROGRESS", "2027-03-26", requal=20, ramp=6, switching=620000, clause="INDEX_Q"),
         ],
         revisions=[
-            rev("A", "2025-03-18", "ECO-0142", "Création du demi-carter gauche.", 9.1),
-            rev("B", "2026-01-13", "ECO-0588", "Nervurage optimisé, voile de 3,5 à 3,0 mm.", 8.4),
+            rev("A", "2025-03-18", "ECO-0142", 9.1),
+            rev("B", "2026-01-13", "ECO-0588", 8.4),
         ],
         options=[
             option("LEFT-TOPO", "Optimisation topologique, voile 2,5 mm", "DESIGN", 0.90, 0.5, 16, 95000, "HIGH", "Aucun.", "Faible : retouche de moule, contrôle de la tenue vibratoire."),
@@ -415,16 +408,15 @@ PARTS = {
     "ID_57": dict(
         description="Demi-carter droit du réducteur, porte les roulements côté moteur.",
         criticality="A", safetyStockDays=6, usageKg=6.9, conversionEur=29.0,
-        maturityDate="2026-08-25", plannedRelease="2027-02-05", blocking="Révision C (nouvel orifice de refroidissement) à valider en étanchéité.",
-        sourcingNote="Moule HPDC propriété de Garda. Bohemia est en cours de PPAP avec un second moule à financer.",
+        maturityDate="2026-08-25", plannedRelease="2027-02-05",
         sourcing=[
             link("SUP-07", "PRIMARY", 100, 49.4, 21, 3, 1200, "CONDITIONAL", "2027-01-22", contract_end="2028-03-31", clause="INDEX_Q"),
             link("SUP-08", "CANDIDATE", 0, 52.0, 24, 3, 800, "IN_PROGRESS", "2027-03-26", requal=20, ramp=6, switching=480000, clause="INDEX_Q"),
         ],
         revisions=[
-            rev("A", "2025-03-18", "ECO-0143", "Création du demi-carter droit.", 6.4),
-            rev("B", "2025-12-02", "ECO-0541", "Renfort des bossages de fixation.", 6.1),
-            rev("C", "2026-08-25", "ECO-0889", "Nouvel orifice de refroidissement, voile aminci.", 5.9),
+            rev("A", "2025-03-18", "ECO-0143", 6.4),
+            rev("B", "2025-12-02", "ECO-0541", 6.1),
+            rev("C", "2026-08-25", "ECO-0889", 5.9),
         ],
         options=[
             option("RIGHT-TOPO", "Optimisation topologique, voile 2,5 mm", "DESIGN", 0.90, 0.4, 16, 80000, "HIGH", "Aucun.", "Faible : retouche de moule, contrôle de la tenue vibratoire."),
@@ -440,20 +432,19 @@ PARTS = {
             link("SUP-09", "SECONDARY", 30, 17.6, 28, 6, 500, "APPROVED", "2026-02-24", ramp=3, contract_end="2027-06-30"),
         ],
         revisions=[
-            rev("A", "2025-04-08", "ECO-0158", "Création du logement de roulement.", 2.2),
-            rev("B", "2025-12-16", "ECO-0560", "Reprise de l'ajustement de roulement.", 2.1),
+            rev("A", "2025-04-08", "ECO-0158", 2.2),
+            rev("B", "2025-12-16", "ECO-0560", 2.1),
         ],
     ),
     "ID_61": dict(
         description="Carter du moteur, coulé en basse pression, reçoit le stator fretté.",
         criticality="A", safetyStockDays=6, usageKg=8.4, conversionEur=46.02,
-        maturityDate="2026-09-01", plannedRelease="2027-01-15", blocking="Rapport d'étanchéité de la révision C attendu.",
-        sourcingNote="Coulée basse pression et noyaux sable propres à Garda : aucune alternative référencée.",
+        maturityDate="2026-09-01", plannedRelease="2027-01-15",
         sourcing=[link("SUP-07", "PRIMARY", 100, 75.0, 21, 3, 1150, "APPROVED", "2026-08-28", contract_end="2028-03-31", clause="INDEX_Q")],
         revisions=[
-            rev("A", "2025-03-25", "ECO-0150", "Création : carter en AlSi9Cu3 sous pression.", 7.6, "Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)"),
-            rev("B", "2025-09-23", "ECO-0411", "Passage en AlSi10Mg coulé basse pression (conductivité thermique et étanchéité).", 7.3),
-            rev("C", "2026-05-12", "ECO-0748", "Intégration du guidage de la chemise de refroidissement.", 7.0),
+            rev("A", "2025-03-25", "ECO-0150", 7.6, "Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)"),
+            rev("B", "2025-09-23", "ECO-0411", 7.3),
+            rev("C", "2026-05-12", "ECO-0748", 7.0),
         ],
         options=[
             option("MOTOR-THIN", "Parois réduites et noyau optimisé", "DESIGN", 0.90, 1.5, 18, 120000, "HIGH", "Aucun.", "Faible à moyen : contrôle de l'étanchéité et de la tenue du frettage."),
@@ -462,25 +453,25 @@ PARTS = {
     ),
     "ID_63": dict(
         criticality="B", safetyStockDays=8, usageKg=1.5, conversionEur=5.53,
-        maturityDate="2026-06-30", plannedRelease="2027-03-05", blocking="Fournisseur non désigné : décision de faire ou d'acheter attendue, date après le jalon.",
+        maturityDate="2026-06-30", plannedRelease="2027-03-05",
         sourcing=[],
         revisions=[
-            rev("A", "2025-04-15", "ECO-0163", "Création du flasque de roulement.", 1.2),
-            rev("B", "2026-06-30", "ECO-0812", "Ajout d'un épaulement de centrage.", 1.1),
+            rev("A", "2025-04-15", "ECO-0163", 1.2),
+            rev("B", "2026-06-30", "ECO-0812", 1.1),
         ],
         options=[option("PLATE-AL", "Flasque en EN AW-6082 avec bague acier", "MATERIAL", 0.50, 5.0, 14, 40000, "MEDIUM", "Local : flasque 3 mm plus épais.", "Moyen : dilatation à la portée de roulement, bague acier nécessaire.", "Aluminium alloy EN AW-6082-T6")],
     ),
     "ID_65": dict(
         description="Support de transmission fixé au carter.",
         criticality="B", safetyStockDays=8, usageKg=3.7, conversionEur=12.68,
-        maturityDate="2026-04-07", plannedRelease="2027-02-12", blocking="Pièce RELEASED alors que le PPAP d'Atlas n'est pas terminé.",
+        maturityDate="2026-04-07", plannedRelease="2027-02-12",
         sourcing=[
             link("SUP-09", "PRIMARY", 100, 23.6, 28, 6, 1100, "IN_PROGRESS", "2027-02-12", requal=17, contract_end="2027-06-30"),
             link("SUP-07", "CANDIDATE", 0, 25.9, 21, 3, 900, "NOT_STARTED", requal=22, ramp=4, switching=280000, clause="INDEX_Q"),
         ],
         revisions=[
-            rev("A", "2025-04-22", "ECO-0170", "Création du support.", 3.5),
-            rev("B", "2026-02-03", "ECO-0611", "Optimisation topologique.", 3.2),
+            rev("A", "2025-04-22", "ECO-0170", 3.5),
+            rev("B", "2026-02-03", "ECO-0611", 3.2),
         ],
         options=[
             option("SUPPORT-TOPO", "Seconde passe d'optimisation topologique", "DESIGN", 0.88, 0.2, 12, 55000, "HIGH", "Aucun.", "Faible : contrôle de la tenue vibratoire."),
@@ -492,7 +483,7 @@ PARTS = {
         criticality="C", safetyStockDays=10, usageKg=0.13, conversionEur=2.09,
         maturityDate="2026-01-20",
         sourcing=[link("SUP-24", "PRIMARY", 100, 2.6, 18, 2, 2600, "APPROVED", "2026-01-06", contract_end="2027-12-31")],
-        revisions=[rev("A", "2025-04-29", "ECO-0176", "Création du raccord coudé.", 0.12)],
+        revisions=[rev("A", "2025-04-29", "ECO-0176", 0.12)],
     ),
     "ID_69": dict(
         description="Vis M10 x 115, classe 10.9, fixation du support de transmission.",
@@ -503,24 +494,24 @@ PARTS = {
             link("SUP-21", "SECONDARY", 30, 0.43, 16, 2, 3000, "APPROVED", "2025-09-30", contract_end="2026-06-30"),
             link("SUP-22", "SECONDARY", 10, 0.38, 70, 40, 5000, "APPROVED", "2025-10-07", ramp=3, contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-05-06", "ECO-0181", "Création : vis catalogue.", 0.089)],
+        revisions=[rev("A", "2025-05-06", "ECO-0181", 0.089)],
     ),
     "ID_71": dict(
         description="Vis M8 x 50, classe 10.9, fixation du couvercle.",
         criticality="C", safetyStockDays=15, usageKg=0.032, conversionEur=0.13,
-        maturityDate="2026-08-04", plannedRelease="2026-12-11", blocking="Référence obsolète : à remplacer dans la nomenclature par la nouvelle vis de longueur corrigée.",
+        maturityDate="2026-08-04", plannedRelease="2026-12-11",
         sourcing=[
             link("SUP-20", "PRIMARY", 60, 0.17, 14, 2, 20000, "APPROVED", "2025-09-30", contract_end="2027-12-31"),
             link("SUP-21", "SECONDARY", 40, 0.16, 16, 2, 9000, "APPROVED", "2025-09-30", contract_end="2026-06-30"),
         ],
-        revisions=[rev("A", "2025-05-06", "ECO-0182", "Création : vis catalogue.", 0.028)],
+        revisions=[rev("A", "2025-05-06", "ECO-0182", 0.028)],
     ),
     "ID_73": dict(
         description="Vis de fixation du carter moteur.",
         criticality="C", safetyStockDays=15, usageKg=0.036, conversionEur=0.14,
         maturityDate="2025-10-14",
         sourcing=[link("SUP-20", "PRIMARY", 100, 0.19, 14, 2, 5000, "APPROVED", "2025-09-30", contract_end="2027-12-31")],
-        revisions=[rev("A", "2025-05-06", "ECO-0183", "Création : vis catalogue.", 0.03)],
+        revisions=[rev("A", "2025-05-06", "ECO-0183", 0.03)],
     ),
     "ID_74": dict(
         description="Vis de fixation du flasque moteur.",
@@ -530,13 +521,13 @@ PARTS = {
             link("SUP-20", "PRIMARY", 80, 0.25, 14, 2, 4000, "APPROVED", "2025-09-30", contract_end="2027-12-31"),
             link("SUP-22", "SECONDARY", 20, 0.21, 70, 40, 2500, "APPROVED", "2025-10-07", ramp=3, contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-05-06", "ECO-0184", "Création : vis catalogue.", 0.05)],
+        revisions=[rev("A", "2025-05-06", "ECO-0184", 0.05)],
     ),
     "ID_76": dict(
         criticality="C", safetyStockDays=15, usageKg=0.032, conversionEur=0.12,
-        maturityDate="2026-09-29", plannedRelease="2026-12-04", blocking="Prix non renseigné : devis attendu.",
+        maturityDate="2026-09-29", plannedRelease="2026-12-04",
         sourcing=[link("SUP-20", "PRIMARY", 100, None, 14, 2, 4000, "APPROVED", "2025-09-30", contract_end="2027-12-31")],
-        revisions=[rev("A", "2025-05-06", "ECO-0185", "Création : vis catalogue.", 0.028)],
+        revisions=[rev("A", "2025-05-06", "ECO-0185", 0.028)],
     ),
     "ID_78": dict(
         criticality="C", safetyStockDays=15, usageKg=0.125, conversionEur=0.38,
@@ -547,7 +538,7 @@ PARTS = {
             link("SUP-21", "SECONDARY", 30, 0.52, 16, 2, 9000, "APPROVED", "2025-09-30", contract_end="2026-06-30"),
             link("SUP-22", "SECONDARY", 10, 0.46, 70, 40, 7000, "APPROVED", "2025-10-07", ramp=3, contract_end="2027-06-30"),
         ],
-        revisions=[rev("A", "2025-05-06", "ECO-0186", "Création : vis catalogue.", 0.113)],
+        revisions=[rev("A", "2025-05-06", "ECO-0186", 0.113)],
         options=[option("BOLT-AL", "Vis en aluminium EN AW-6056", "MATERIAL", 0.40, 1.2, 14, 45000, "MEDIUM", "Aucun : mêmes dimensions.", "Moyen : précharge et fluage à revalider, couple de serrage à reprendre.", "Aluminium alloy EN AW-6056 (fasteners)")],
     ),
 }
@@ -584,35 +575,35 @@ COMPLEXITY = {
 # Assemblages : historique de révision. La maturité est dans MATURITY.
 ASSEMBLIES = {
     "ID_0": dict(description="E-drive avant 410 kW : moteur, réducteur à deux étages et différentiel, carters.", maturityDate="2026-10-06", revisions=[
-        rev("A", "2025-05-06", "ECO-0180", "Première structure du produit.", 106.9),
-        rev("B", "2025-12-09", "ECO-0545", "Intégration des réductions de masse du carter et des arbres.", 104.2),
-        rev("C", "2026-04-28", "ECO-0720", "Stator révision C et support de transmission optimisé.", 101.8),
-        rev("D", "2026-10-06", "ECO-0948", "Couronne révision D et orifice de refroidissement.", 100.1),
+        rev("A", "2025-05-06", "ECO-0180", 106.9),
+        rev("B", "2025-12-09", "ECO-0545", 104.2),
+        rev("C", "2026-04-28", "ECO-0720", 101.8),
+        rev("D", "2026-10-06", "ECO-0948", 100.1),
     ]),
     "ID_1": dict(description="Moteur électrique avant : stator, arbre rapide, refroidissement.", maturityDate="2026-04-14", revisions=[
-        rev("A", "2025-02-18", "ECO-0113", "Première structure du moteur.", 42.9),
-        rev("B", "2025-11-25", "ECO-0490", "Arbre rapide révision B.", 42.4),
-        rev("C", "2026-03-17", "ECO-0660", "Stator révision C.", 39.73),
+        rev("A", "2025-02-18", "ECO-0113", 42.9),
+        rev("B", "2025-11-25", "ECO-0490", 42.4),
+        rev("C", "2026-03-17", "ECO-0660", 39.73),
     ]),
     "ID_8": dict(description="Stator : paquet de tôles et bobinage.", maturityDate="2026-05-19", revisions=[
-        rev("A", "2025-01-28", "ECO-0100", "Première structure du stator.", 30.6),
-        rev("B", "2025-08-19", "ECO-0370", "Passage en tôle M235-35A.", 30.5),
-        rev("C", "2026-03-10", "ECO-0657", "Paquet de tôles révision C.", 28.98),
+        rev("A", "2025-01-28", "ECO-0100", 30.6),
+        rev("B", "2025-08-19", "ECO-0370", 30.5),
+        rev("C", "2026-03-10", "ECO-0657", 28.98),
     ]),
     "ID_17": dict(description="Réducteur à deux étages avec différentiel (entraxes 100 et 154 mm).", maturityDate="2026-09-29", revisions=[
-        rev("A", "2025-02-25", "ECO-0122", "Première structure du réducteur.", 31.2),
-        rev("B", "2025-09-16", "ECO-0398", "Reprises de denture.", 30.6),
-        rev("C", "2026-02-24", "ECO-0640", "Couronne allégée.", 30.05),
-        rev("D", "2026-09-29", "ECO-0935", "Couronne révision D (NVH).", 29.85),
+        rev("A", "2025-02-25", "ECO-0122", 31.2),
+        rev("B", "2025-09-16", "ECO-0398", 30.6),
+        rev("C", "2026-02-24", "ECO-0640", 30.05),
+        rev("D", "2026-09-29", "ECO-0935", 29.85),
     ]),
     "ID_18": dict(description="Différentiel : boîtier, axe, satellites et planétaires.", maturityDate="2026-02-24", revisions=[
-        rev("A", "2025-03-04", "ECO-0127", "Première structure du différentiel.", 7.05),
-        rev("B", "2025-10-14", "ECO-0435", "Boîtier révision B.", 6.85),
+        rev("A", "2025-03-04", "ECO-0127", 7.05),
+        rev("B", "2025-10-14", "ECO-0435", 6.85),
     ]),
     "ID_51": dict(description="Carters, joints, raccords et visserie de l'e-drive.", maturityDate="2026-09-01", revisions=[
-        rev("A", "2025-04-29", "ECO-0177", "Première structure des carters.", 33.0),
-        rev("B", "2026-02-10", "ECO-0615", "Demi-carter gauche et support révision B.", 31.1),
-        rev("C", "2026-09-01", "ECO-0892", "Demi-carter droit et carter moteur révision C.", 30.52),
+        rev("A", "2025-04-29", "ECO-0177", 33.0),
+        rev("B", "2026-02-10", "ECO-0615", 31.1),
+        rev("C", "2026-09-01", "ECO-0892", 30.52),
     ]),
 }
 
@@ -698,48 +689,7 @@ INTERFACES = [
     ("ID_53", "ID_57", "sealing", "Joint logé dans le demi-carter droit"),
 ]
 
-# Événements fictifs. Les cours cités sont réels (voir README).
-SCENARIOS = [
-    dict(id="S1-VOLTARON", kind="SUPPLY_DISRUPTION", part="ID_14", supplier="SUP-01", durationWeeks=16,
-         title="Incendie de la presse d'emboutissage chez Voltaron",
-         narrative="Un incendie détruit la matrice progressive à Siegen. Il faut 16 semaines pour reprendre la production du paquet de tôles, seul fournisseur qualifié. Slovlam est encore en PPAP."),
-    dict(id="S1-NANIWA", kind="SUPPLY_DISRUPTION", part="ID_3", supplier="SUP-17", durationWeeks=8,
-         title="Arrêt de l'atelier de billes céramique chez Naniwa",
-         narrative="L'atelier d'Osaka s'arrête 8 semaines. Le roulement arrière n'a pas d'alternative, mais 6 semaines de transit maritime et 3 semaines de stock retardent l'effet : le trou d'approvisionnement arrive tard, et le fret aérien peut le combler."),
-    dict(id="S1-BALKAN", kind="SUPPLY_DISRUPTION", part="ID_16", supplier="SUP-05", durationWeeks=12,
-         title="Perte de la ligne d'émaillage chez Balkan Enamel",
-         narrative="Le second fournisseur du bobinage (30 % du volume) s'arrête 12 semaines. Ce scénario montre l'effet protecteur de la double source : Cuprotherm absorbe une grande partie du volume."),
-    dict(id="S1-GARDA", kind="SUPPLY_DISRUPTION", part="ID_61", supplier="SUP-07", durationWeeks=6,
-         title="Inondation de la fonderie Garda à Brescia",
-         narrative="Une inondation arrête la coulée basse pression 6 semaines. Le carter moteur est mono-source et aucune alternative n'est référencée."),
-    dict(id="S2-CU-UP", kind="MATERIAL_PRICE", family="Cuivre", pct=15,
-         title="Cuivre : nouvelle hausse de 15 %",
-         narrative="Le cuivre LME cote déjà 14 415 $/t le 23/10/2026, près de son record de 14 850 $/t d'août 2026. Une hausse de 15 % le porterait vers 16 600 $/t."),
-    dict(id="S2-CU-DOWN", kind="MATERIAL_PRICE", family="Cuivre", pct=-25,
-         title="Cuivre : retour vers 11 000 $/t",
-         narrative="Détente du marché : le LME revient vers 11 000 $/t, soit 25 % de moins qu'en octobre 2026. Ce scénario mesure le gain potentiel et l'intérêt des contrats indexés."),
-    dict(id="S2-AL-UP", kind="MATERIAL_PRICE", family="Aluminium", pct=25,
-         title="Aluminium : hausse de 25 %",
-         narrative="L'aluminium LME est autour de 3 100 $/t début octobre 2026. Le coût carbone (CBAM) alimente les primes européennes depuis janvier 2026. Une hausse de 25 % toucherait les 6 pièces en aluminium, soit 30 kg."),
-    dict(id="S2-FE-UP", kind="MATERIAL_PRICE", family="Acier électrique", pct=18,
-         title="Acier électrique : hausse de 18 %",
-         narrative="Tension sur les tôles fines à faibles pertes, en concurrence avec d'autres marchés de moteurs électriques. Hypothèse de travail, sans cotation publique."),
-    dict(id="S3-GARDA", kind="SUPPLIER_EXIT", supplier="SUP-07",
-         title="Défaillance de Garda Pressofusioni",
-         narrative="Garda, notation financière C, concentre les carters. Que se passe-t-il si ce fournisseur disparaît avant le démarrage série ?"),
-    dict(id="S3-DECCAN", kind="SUPPLIER_SWITCH", part="ID_48", toSupplier="SUP-13", sharePct=100,
-         title="Délocaliser la couronne vers Deccan (Inde)",
-         narrative="Les achats proposent de passer la couronne de Schwaben à Deccan pour gagner 16 % sur le prix. Le gain couvre-t-il le coût de qualification, le stock et le risque ?"),
-    dict(id="S3-SLOVLAM", kind="SUPPLIER_SWITCH", part="ID_14", toSupplier="SUP-02", sharePct=30,
-         title="Sécuriser le paquet de tôles avec Slovlam (30 %)",
-         narrative="Activer une double source sur la pièce la plus lourde et la plus critique, avec 30 % du volume confié à Slovlam."),
-    dict(id="S4-RELEASE", kind="RELEASE", target="RELEASED",
-         title="Release du produit au jalon du 1er mars 2027",
-         narrative="L'OEM demande une nomenclature entièrement RELEASED au 1er mars 2027 pour tenir le démarrage série de septembre 2027."),
-    dict(id="S5-95KG", kind="MASS", perimeter="ID_0", targetKg=95.0,
-         title="Atteindre 95 kg sur l'e-drive",
-         narrative="L'OEM vise 95 kg contre 100,1 kg aujourd'hui, soit 5,1 kg à gagner sans compromettre le démarrage série."),
-]
+
 
 
 def ext(parent, tag, **attrs):
@@ -814,7 +764,6 @@ def update_products(structure):
 
 
 def build_enrichment(root, structure, wrappers):
-    names = {e.get("id"): (e.findtext(XPDM + "ID"), e.findtext(XPDM + "Name")) for e in structure.findall(XPDM + "Product")}
     enrichment = ET.SubElement(root, EXT + "Enrichment", {
         "status": "SIMULATED",
         "generatedFrom": SOURCE_XML.name,
@@ -835,12 +784,11 @@ def build_enrichment(root, structure, wrappers):
 
     parts = ext(enrichment, "PartData")
     for product_id, spec in {**ASSEMBLIES, **PARTS}.items():
-        plm_id, name = names[product_id]
-        attrs = {k: v for k, v in spec.items() if k not in ("revisions", "sourcing", "options", "description", "modified")}
+        attrs = {k: v for k, v in spec.items() if k not in ("revisions", "sourcing", "options", "description", "modified", "blocking", "sourcingNote")}
         if product_id in COMPLEXITY:
             process, process_rating, precision_rating, operations = COMPLEXITY[product_id]
             attrs.update(process=process, processRating=process_rating, precisionRating=precision_rating, operations=operations)
-        part = ext(parts, "Part", ref=product_id, plmId=plm_id, name=name, **attrs)
+        part = ext(parts, "Part", ref=product_id, **attrs)
         for row in spec.get("sourcing", []):
             ext(part, "Sourcing", **row)
         for row in spec["revisions"]:
@@ -848,9 +796,8 @@ def build_enrichment(root, structure, wrappers):
         for row in spec.get("options", []):
             ext(part, "MassOption", **row)
     for wrapper_id, part_id in wrappers.items():
-        plm_id, name = names[wrapper_id]
         date = PARTS[part_id]["maturityDate"]
-        ext(parts, "Part", ref=wrapper_id, plmId=plm_id, name=name, maturityDate=date, wrapperOf=part_id)
+        ext(parts, "Part", ref=wrapper_id, maturityDate=date)
 
     interface_types = ext(enrichment, "InterfaceTypes")
     for row in INTERFACE_TYPES:
@@ -860,15 +807,12 @@ def build_enrichment(root, structure, wrappers):
     for first, second, kind, note in INTERFACES:
         ext(interfaces, "Interface", first=first, second=second, type=kind, note=note)
 
-    scenarios = ext(enrichment, "Scenarios")
-    for scenario in SCENARIOS:
-        ext(scenarios, "Scenario", **scenario)
-
     ET.indent(enrichment, space="  ", level=1)
     enrichment.tail = "\n"
 
 
-def main():
+def build_tree():
+    """Construit un nouvel export sans écrire dans le fichier d'origine."""
     ET.register_namespace("", XPDM_URI)
     ET.register_namespace("xsi", XSI_URI)
     ET.register_namespace("ext", EXT_URI)
@@ -885,6 +829,11 @@ def main():
 
     wrappers = update_products(structure)
     build_enrichment(root, structure, wrappers)
+    return tree
+
+
+def main():
+    tree = build_tree()
 
     OUTPUT_XML.parent.mkdir(exist_ok=True)
     tree.write(OUTPUT_XML, encoding="UTF-8", xml_declaration=True, short_empty_elements=False)

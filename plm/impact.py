@@ -1,10 +1,11 @@
 """Analyse d'impacts : applique des facteurs à une copie du produit et compare le résultat à la référence.
 
-Cinq facteurs combinables : rupture d'un fournisseur, prix d'un matériau, changement de fournisseur, release
-et allègement. Sans élément choisi, un facteur touche toutes les pièces qu'il concerne.
+Six facteurs combinables : rupture, prix matière, changement de fournisseur,
+release, allègement et versioning.
 """
 from copy import deepcopy
 from math import ceil
+from datetime import timedelta
 
 from plm import scenarios
 from plm.model import FAMILIES, MATURITY_RANK, PlmModel, QUALIFIED
@@ -17,6 +18,21 @@ MATURITY_VALUES = {"RELEASED": 1.0, "FROZEN": 0.75, "IN_WORK": 0.4, "PRIVATE": 0
 FEASIBILITY_QUALITY_PENALTY = {"HIGH": 0, "MEDIUM": 5, "LOW": 15}
 FEASIBILITY_RISK = {"HIGH": 0, "MEDIUM": 5, "LOW": 10}
 CONCENTRATED_MATERIAL_RISK = 5  # magnésium : offre très concentrée en Chine
+
+
+def next_revision(part):
+    current = str(part["revision"])
+    if current.isascii() and current.isalpha() and current.isupper():
+        value = 0
+        for letter in current:
+            value = value * 26 + ord(letter) - ord('A') + 1
+        value += 1
+        label = ''
+        while value:
+            value, digit = divmod(value - 1, 26)
+            label = chr(ord('A') + digit) + label
+        return label
+    return str(int(current) + 1) if current.isdigit() else current + '.1'
 
 QUALITY_CRITERIA = [
     dict(key="ppm", label="Qualité fournisseur (PPM)", max=35, rule="100 % à 0 ppm, 0 % à 150 ppm ou plus, moyenne pondérée par la part de volume"),
@@ -131,6 +147,92 @@ class ScenarioBuilder:
 
     def wrappers_of(self, part_id):
         return [p for p in self.products.values() if p["kind"] == "wrapper" and p["children"][0]["product"] == part_id]
+
+    # ---------------------------------------------------------- Versioning
+    def apply_versioning(self, settings):
+        part_id = settings["part"]
+        if part_id not in {p["xml_id"] for p in self.model.physical_parts}:
+            raise ValueError("Le versioning doit concerner une pièce physique.")
+        if not self.in_scope(part_id):
+            self.notes.append("Versioning : la pièce choisie est hors du périmètre des éléments sélectionnés.")
+            return
+        reference = self.model.products[part_id]
+        part = self.products[part_id]
+        kind = settings.get("kind", "geometry")
+        if kind not in ("geometry", "material", "process"):
+            raise ValueError("Nature de modification inconnue.")
+        weeks = settings["weeks"]
+        delta_pct = settings.get("mass_pct", 0)
+        if not 1 <= weeks <= 52 or not -50 <= delta_pct <= 50:
+            raise ValueError("Paramètres de versioning hors limites.")
+        interfaces = self.model.real_interfaces(part_id)
+        selected = settings.get("interfaces")
+        if selected is not None:
+            known = {i['other'] for i in interfaces}
+            if not set(selected) <= known:
+                raise ValueError("Interface étrangère à la pièce modifiée.")
+            interfaces = [i for i in interfaces if i['other'] in selected]
+        elif kind == 'process':
+            interfaces = []
+        types = sorted({i['type'] for i in interfaces})
+        tests = [self.model.interface_types[t] for t in types]
+        weeks = max(weeks, max((test['weeks'] for test in tests), default=0))
+        revision = next_revision(reference)
+        old_material_cost = self.model.material_cost(part)
+        self.track_family(part.get('material_family'))
+        new_material = settings.get('material') if kind == 'material' else None
+        if new_material:
+            if new_material not in self.model.materials:
+                raise ValueError("Matériau inconnu.")
+            part['material'] = new_material
+            part['material_family'] = self.model.materials[new_material]['family']
+        complexity_delta = settings.get('complexity_delta', 0)
+        if not -2 <= complexity_delta <= 2:
+            raise ValueError("Variation de complexité hors limites.")
+        if kind == 'process':
+            for key in ('process_rating', 'precision_rating'):
+                part[key] = min(5, max(1, part[key] + complexity_delta))
+        part["mass_kg"] = round(part["mass_kg"] * (1 + delta_pct / 100), 4)
+        if part.get("usage_kg"):
+            part["usage_kg"] *= 1 + delta_pct / 100
+        new_material_cost = self.model.material_cost(part)
+        delta_cost = new_material_cost - old_material_cost
+        for link in part["sourcing"]:
+            if "unit_price_eur" in link:
+                link["unit_price_eur"] += delta_cost
+            was_qualified = link["qualification"] in QUALIFIED
+            if was_qualified:
+                link["qualification"] = "IN_PROGRESS"
+            link["requal_weeks"] = weeks if was_qualified else max(weeks, link['requal_weeks'])
+            link["ppap_date"] = (self.model.reference_date + timedelta(weeks=link['requal_weeks'])).isoformat()
+            if link["share_pct"] > 0:
+                self.track_supplier(link["supplier"])
+        planned = (self.model.reference_date + timedelta(weeks=weeks)).isoformat()
+        for item in [part, *self.wrappers_of(part_id)]:
+            item["revision"] = revision
+            item["revision_index"] += 1
+            item["maturity"] = "IN_WORK"
+            item["modified"] = self.model.reference_date.isoformat() + "T09:00:00Z"
+            item["maturity_date"] = self.model.reference_date.isoformat()
+            item["planned_release"] = planned
+            if item is not part:
+                item["mass_kg"] = part["mass_kg"]
+                item['material'] = part['material']
+                item['material_family'] = part['material_family']
+        part["revisions"].append({"name": revision, "date": self.model.reference_date.isoformat(), "eco": "SIMULATION", "mass_kg": part["mass_kg"], "material": part["material"]})
+        self.track_family(part.get("material_family"))
+        self.touch(part_id, "Versioning")
+        self.details["versioning"] = {
+            "part": self.model.node_label(part_id), "part_id": part_id,
+            "before": reference["revision"], "after": revision,
+            "weeks": weeks, "planned_release": planned,
+            "interfaces": len(interfaces),
+            "kind": kind,
+            "neighbors": [{"part_id": i['other'], "part": self.model.node_label(i['other']), "type": self.model.interface_types[i['type']]['label'], "test": self.model.interface_types[i['type']]['test']} for i in interfaces],
+            "assemblies": scenarios.blocked_chain(self.model, part_id),
+            "tests": tests, "one_off": sum(test["cost_eur"] for test in tests),
+            "mass_pct": delta_pct,
+        }
 
     # ---------------------------------------------------------- Allègement
     def apply_mass(self, settings):
@@ -299,7 +401,7 @@ class ScenarioBuilder:
         target, gate = settings["target"], settings["gate"]
         for reference in self.model.physical_parts:
             part_id = reference["xml_id"]
-            check = scenarios.part_release_status(self.model, reference, target, gate)
+            check = scenarios.part_release_status(self.model, self.products[part_id], target, gate)
             if check["ready"]:
                 continue
             # Sans élément choisi : projection au jalon, seules les pièces prévues à temps sont promues.
@@ -383,10 +485,14 @@ def part_row(reference, scenario, part_id, factors, before, after):
         "quality_after": after["quality"][part_id],
         "suppliers_before": sources(reference, ref_part),
         "suppliers_after": sources(scenario, new_part),
+        "qualified_before": len(reference.qualified_links(ref_part)),
+        "qualified_after": len(scenario.qualified_links(new_part)),
         "material_before": ref_part["material"],
         "material_after": new_part["material"],
         "maturity_before": ref_part["maturity"],
         "maturity_after": new_part["maturity"],
+        "revision_before": ref_part["revision"],
+        "revision_after": new_part["revision"],
     }
 
 
@@ -394,6 +500,8 @@ def analyze(model, params):
     """Applique les facteurs actifs et renvoie les indicateurs face à la référence."""
     scope = resolve_scope(model, params.get("elements", []))
     builder = ScenarioBuilder(model, scope)
+    if params.get("versioning"):
+        builder.apply_versioning(params["versioning"])
     if params.get("mass"):
         builder.apply_mass(params["mass"])
     if params.get("price"):
@@ -418,13 +526,25 @@ def analyze(model, params):
     families = builder.families_tracked or [max(before["materials"], key=before["materials"].get)]
 
     details = dict(builder.details)
+    if details.get('versioning'):
+        part_id = details['versioning']['part_id']
+        risk_before = next(r for r in scenarios.criticality(model) if r['part_id'] == part_id)
+        risk_after = next(r for r in scenarios.criticality(scenario) if r['part_id'] == part_id)
+        details['versioning']['criteria'] = [
+            {'criterion': b['label'], 'before': b['points'], 'after': a['points'], 'detail': a['detail']}
+            for b, a in zip(risk_before['breakdown'], risk_after['breakdown'])
+        ]
+        details['versioning']['quality_criteria'] = [
+            {'criterion': c['label'], 'before': quality_of_part(model, model.products[part_id])['points'][c['key']], 'after': quality_of_part(scenario, scenario.products[part_id])['points'][c['key']]}
+            for c in QUALITY_CRITERIA
+        ]
     if params.get("release"):
         target, gate = params["release"]["target"], params["release"]["gate"]
         details["release"] = {"before": scenarios.release_readiness(model, target, gate), "after": scenarios.release_readiness(scenario, target, gate), "target": target, "gate": gate}
 
     rows = [part_row(model, scenario, part_id, builder.touched[part_id], before, after) for part_id in touched_ids]
     rows.sort(key=lambda r: -abs(r["cost_after"] - r["cost_before"]) - abs(r["mass_after"] - r["mass_before"]) - abs(r["risk_after"] - r["risk_before"]))
-    sources = [model.source_ref(r["part_id"], "masse, matériau, coût, sourcing, maturité") for r in rows] + [model.supplier_ref(s, "part des achats, qualité") for s in suppliers if touched_ids]
+    sources = [model.source_ref(r["part_id"], "révision, masse, matériau, coût, sourcing, maturité, interfaces") for r in rows] + [model.supplier_ref(s, "part des achats, qualité") for s in suppliers if touched_ids]
 
     return {
         "scope": scope,

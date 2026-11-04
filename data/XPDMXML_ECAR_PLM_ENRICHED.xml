@@ -4415,7 +4415,6 @@
       <ext:Param name="referenceDate" value="2026-10-14"></ext:Param>
       <ext:Param name="annualVolume" value="48000"></ext:Param>
       <ext:Param name="productionWeeks" value="48"></ext:Param>
-      <ext:Param name="weeklyDemand" value="1000"></ext:Param>
       <ext:Param name="workingDaysPerWeek" value="5"></ext:Param>
       <ext:Param name="sopDate" value="2027-09-06"></ext:Param>
       <ext:Param name="releaseGateDate" value="2027-03-01"></ext:Param>
@@ -4427,7 +4426,6 @@
       <ext:Param name="inventoryCarryingPct" value="8"></ext:Param>
       <ext:Param name="massTargetKg" value="95.0"></ext:Param>
       <ext:Param name="lightweightValueEurKg" value="8.0"></ext:Param>
-      <ext:Param name="eurUsd" value="1.14"></ext:Param>
     </ext:Program>
     <ext:Materials>
       <ext:Material id="MAT-ALSI9" plmName="Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)" family="Aluminium" densityKgDm3="2.71" priceEurKg="2.95" index="LME Aluminium + prime Europe" indexShare="0.9" co2KgPerKg="4.5" inBom="true"></ext:Material>
@@ -4479,290 +4477,290 @@
       <ext:Supplier id="SUP-25" name="Décolletage de l'Arve SAS" country="FR" countryName="France" city="Cluses" lat="46.06" lon="6.58" region="UE" speciality="Décolletage de précision" certification="IATF 16949" qualityPpm="20" otdPct="97.0" financialRating="A" geoRisk="1"></ext:Supplier>
     </ext:Suppliers>
     <ext:PartData>
-      <ext:Part ref="ID_0" plmId="prd-12535825-00000047" name="ECAR-EI_410KW_EDRIVE_FRONT" maturityDate="2026-10-06">
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0180" reason="Première structure du produit." massKg="106.9"></ext:Revision>
-        <ext:Revision name="B" date="2025-12-09" eco="ECO-0545" reason="Intégration des réductions de masse du carter et des arbres." massKg="104.2"></ext:Revision>
-        <ext:Revision name="C" date="2026-04-28" eco="ECO-0720" reason="Stator révision C et support de transmission optimisé." massKg="101.8"></ext:Revision>
-        <ext:Revision name="D" date="2026-10-06" eco="ECO-0948" reason="Couronne révision D et orifice de refroidissement." massKg="100.1"></ext:Revision>
+      <ext:Part ref="ID_0" maturityDate="2026-10-06">
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0180" massKg="106.9"></ext:Revision>
+        <ext:Revision name="B" date="2025-12-09" eco="ECO-0545" massKg="104.2"></ext:Revision>
+        <ext:Revision name="C" date="2026-04-28" eco="ECO-0720" massKg="101.8"></ext:Revision>
+        <ext:Revision name="D" date="2026-10-06" eco="ECO-0948" massKg="100.1"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_1" plmId="prd-12535825-00000048" name="ECAR-EI_EMOTOR FRONT" maturityDate="2026-04-14">
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0113" reason="Première structure du moteur." massKg="42.9"></ext:Revision>
-        <ext:Revision name="B" date="2025-11-25" eco="ECO-0490" reason="Arbre rapide révision B." massKg="42.4"></ext:Revision>
-        <ext:Revision name="C" date="2026-03-17" eco="ECO-0660" reason="Stator révision C." massKg="39.73"></ext:Revision>
+      <ext:Part ref="ID_1" maturityDate="2026-04-14">
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0113" massKg="42.9"></ext:Revision>
+        <ext:Revision name="B" date="2025-11-25" eco="ECO-0490" massKg="42.4"></ext:Revision>
+        <ext:Revision name="C" date="2026-03-17" eco="ECO-0660" massKg="39.73"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_8" plmId="prd-12535825-00000054" name="ECAR-EI_STATOR" maturityDate="2026-05-19">
-        <ext:Revision name="A" date="2025-01-28" eco="ECO-0100" reason="Première structure du stator." massKg="30.6"></ext:Revision>
-        <ext:Revision name="B" date="2025-08-19" eco="ECO-0370" reason="Passage en tôle M235-35A." massKg="30.5"></ext:Revision>
-        <ext:Revision name="C" date="2026-03-10" eco="ECO-0657" reason="Paquet de tôles révision C." massKg="28.98"></ext:Revision>
+      <ext:Part ref="ID_8" maturityDate="2026-05-19">
+        <ext:Revision name="A" date="2025-01-28" eco="ECO-0100" massKg="30.6"></ext:Revision>
+        <ext:Revision name="B" date="2025-08-19" eco="ECO-0370" massKg="30.5"></ext:Revision>
+        <ext:Revision name="C" date="2026-03-10" eco="ECO-0657" massKg="28.98"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_17" plmId="prd-12535825-00000049" name="ECAR-EI_REDUCER FRONT" maturityDate="2026-09-29">
-        <ext:Revision name="A" date="2025-02-25" eco="ECO-0122" reason="Première structure du réducteur." massKg="31.2"></ext:Revision>
-        <ext:Revision name="B" date="2025-09-16" eco="ECO-0398" reason="Reprises de denture." massKg="30.6"></ext:Revision>
-        <ext:Revision name="C" date="2026-02-24" eco="ECO-0640" reason="Couronne allégée." massKg="30.05"></ext:Revision>
-        <ext:Revision name="D" date="2026-09-29" eco="ECO-0935" reason="Couronne révision D (NVH)." massKg="29.85"></ext:Revision>
+      <ext:Part ref="ID_17" maturityDate="2026-09-29">
+        <ext:Revision name="A" date="2025-02-25" eco="ECO-0122" massKg="31.2"></ext:Revision>
+        <ext:Revision name="B" date="2025-09-16" eco="ECO-0398" massKg="30.6"></ext:Revision>
+        <ext:Revision name="C" date="2026-02-24" eco="ECO-0640" massKg="30.05"></ext:Revision>
+        <ext:Revision name="D" date="2026-09-29" eco="ECO-0935" massKg="29.85"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_18" plmId="prd-12535825-00000055" name="ECAR-EI_DIFFERENTIAL_ASSEMBLY" maturityDate="2026-02-24">
-        <ext:Revision name="A" date="2025-03-04" eco="ECO-0127" reason="Première structure du différentiel." massKg="7.05"></ext:Revision>
-        <ext:Revision name="B" date="2025-10-14" eco="ECO-0435" reason="Boîtier révision B." massKg="6.85"></ext:Revision>
+      <ext:Part ref="ID_18" maturityDate="2026-02-24">
+        <ext:Revision name="A" date="2025-03-04" eco="ECO-0127" massKg="7.05"></ext:Revision>
+        <ext:Revision name="B" date="2025-10-14" eco="ECO-0435" massKg="6.85"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_51" plmId="prd-12535825-00000050" name="ECAR-EI_HOUSING FRONT EDRIVE" maturityDate="2026-09-01">
-        <ext:Revision name="A" date="2025-04-29" eco="ECO-0177" reason="Première structure des carters." massKg="33.0"></ext:Revision>
-        <ext:Revision name="B" date="2026-02-10" eco="ECO-0615" reason="Demi-carter gauche et support révision B." massKg="31.1"></ext:Revision>
-        <ext:Revision name="C" date="2026-09-01" eco="ECO-0892" reason="Demi-carter droit et carter moteur révision C." massKg="30.52"></ext:Revision>
+      <ext:Part ref="ID_51" maturityDate="2026-09-01">
+        <ext:Revision name="A" date="2025-04-29" eco="ECO-0177" massKg="33.0"></ext:Revision>
+        <ext:Revision name="B" date="2026-02-10" eco="ECO-0615" massKg="31.1"></ext:Revision>
+        <ext:Revision name="C" date="2026-09-01" eco="ECO-0892" massKg="30.52"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_3" plmId="prd-12535825-00000081" name="ECAR-3D_HSH_BEA3" criticality="A" safetyStockDays="15" usageKg="0.8" conversionEur="30.64" maturityDate="2026-07-07" plannedRelease="2026-12-15" blocking="Validation de l'isolation électrique en cours chez le fournisseur." sourcingNote="Variante hybride céramique propre à Naniwa : aucune alternative référencée." process="Roulement hybride céramique à isolation électrique" processRating="5" precisionRating="5" operations="11">
+      <ext:Part ref="ID_3" criticality="A" safetyStockDays="15" usageKg="0.8" conversionEur="30.64" maturityDate="2026-07-07" plannedRelease="2026-12-15" process="Roulement hybride céramique à isolation électrique" processRating="5" precisionRating="5" operations="11">
         <ext:Sourcing supplier="SUP-17" role="PRIMARY" sharePct="100" leadTimeDays="63" transitDays="42" capacityPerWeek="2000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="32.0" ppapDate="2026-05-20" contractEnd="2027-12-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0114" reason="Création : roulement hybride céramique 6209." massKg="0.55"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0114" massKg="0.55"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_5" plmId="prd-12535825-00000082" name="ECAR-3D_HSH" criticality="A" safetyStockDays="8" usageKg="8.4" conversionEur="46.0" maturityDate="2026-06-23" plannedRelease="2026-12-10" blocking="Rapport d'endurance à finaliser." process="Forgeage, tournage, cannelures, trempe et rectification" processRating="4" precisionRating="5" operations="11">
+      <ext:Part ref="ID_5" criticality="A" safetyStockDays="8" usageKg="8.4" conversionEur="46.0" maturityDate="2026-06-23" plannedRelease="2026-12-10" process="Forgeage, tournage, cannelures, trempe et rectification" processRating="4" precisionRating="5" operations="11">
         <ext:Sourcing supplier="SUP-14" role="PRIMARY" sharePct="100" leadTimeDays="20" transitDays="2" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="58.6" ppapDate="2026-06-10" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-11" role="CANDIDATE" sharePct="0" leadTimeDays="18" transitDays="2" capacityPerWeek="800" qualification="NOT_STARTED" requalWeeks="26" rampUpWeeks="4" switchingCostEur="240000" priceClause="FIXED" unitPriceEur="63.5"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-11" eco="ECO-0112" reason="Création : arbre plein, cannelures DIN 5480." massKg="7.3"></ext:Revision>
-        <ext:Revision name="B" date="2025-11-18" eco="ECO-0487" reason="Réduction de diamètre hors portées, tenue en fatigue vérifiée." massKg="6.8"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-11" eco="ECO-0112" massKg="7.3"></ext:Revision>
+        <ext:Revision name="B" date="2025-11-18" eco="ECO-0487" massKg="6.8"></ext:Revision>
         <ext:MassOption id="HSH-HOLLOW" label="Arbre creux (forgeage orbital)" kind="DESIGN" massFactor="0.68" costDeltaEur="9.0" requalWeeks="20" oneOffEur="210000" feasibility="HIGH" spaceImpact="Aucun : diamètres extérieurs inchangés." risk="Faible : solution courante sur moteurs de traction. Réduit aussi l'inertie."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_7" plmId="prd-12535825-00000083" name="ECAR-3D_MachineCooling" criticality="A" safetyStockDays="10" usageKg="4.1" conversionEur="35.05" maturityDate="2026-07-22" plannedRelease="2027-02-12" blocking="Micro-fuites sur soudure FSW à 3 bar : plan d'action en cours chez Nordprofil." sourcingNote="Procédé d'extrusion et de soudage propre au fournisseur : aucune alternative référencée." process="Extrusion à canaux hélicoïdaux, soudage FSW, contrôle d'étanchéité" processRating="4" precisionRating="3" operations="8">
+      <ext:Part ref="ID_7" criticality="A" safetyStockDays="10" usageKg="4.1" conversionEur="35.05" maturityDate="2026-07-22" plannedRelease="2027-02-12" process="Extrusion à canaux hélicoïdaux, soudage FSW, contrôle d'étanchéité" processRating="4" precisionRating="3" operations="8">
         <ext:Sourcing supplier="SUP-10" role="PRIMARY" sharePct="100" leadTimeDays="28" transitDays="6" capacityPerWeek="1150" qualification="CONDITIONAL" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="49.4" ppapDate="2027-02-05" contractEnd="2027-09-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-04" eco="ECO-0130" reason="Création : chemise extrudée à canaux hélicoïdaux." massKg="3.2"></ext:Revision>
-        <ext:Revision name="B" date="2026-07-22" eco="ECO-0861" reason="Épaississement de la zone FSW après micro-fuites à 3 bar." massKg="3.4"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-04" eco="ECO-0130" massKg="3.2"></ext:Revision>
+        <ext:Revision name="B" date="2026-07-22" eco="ECO-0861" massKg="3.4"></ext:Revision>
         <ext:MassOption id="COOL-THIN" label="Parois minces et canal intégré" kind="DESIGN" massFactor="0.85" costDeltaEur="2.0" requalWeeks="20" oneOffEur="90000" feasibility="MEDIUM" spaceImpact="Aucun : diamètre extérieur inchangé." risk="Moyen : à revalider en pression à cause des micro-fuites déjà constatées."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_10" plmId="prd-12535825-00000118" name="ECAR-3D_Stator Core Tooth" physical="false" criticality="C" maturityDate="2025-01-20">
-        <ext:Revision name="A" date="2025-01-20" eco="ECO-0096" reason="Création : secteur de dent pour le maillage éléments finis." massKg="0.12"></ext:Revision>
+      <ext:Part ref="ID_10" physical="false" criticality="C" maturityDate="2025-01-20">
+        <ext:Revision name="A" date="2025-01-20" eco="ECO-0096" massKg="0.12"></ext:Revision>
         <ext:MassOption id="DATA-TOOTH" label="Retirer de la nomenclature (géométrie d'étude)" kind="DATA" massFactor="0.0" costDeltaEur="0.0" requalWeeks="0" oneOffEur="0" feasibility="HIGH" spaceImpact="Aucun." risk="Aucun : correction de données, pas de pièce physique supprimée."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_12" plmId="prd-12535825-00000119" name="ECAR-3D_Stator Coil" physical="false" criticality="C" maturityDate="2025-09-30">
-        <ext:Revision name="A" date="2025-01-20" eco="ECO-0098" reason="Création : bobine unitaire pour le maillage." massKg="0.18"></ext:Revision>
-        <ext:Revision name="B" date="2025-09-30" eco="ECO-0402" reason="Mise à jour de la section du conducteur." massKg="0.16"></ext:Revision>
+      <ext:Part ref="ID_12" physical="false" criticality="C" maturityDate="2025-09-30">
+        <ext:Revision name="A" date="2025-01-20" eco="ECO-0098" massKg="0.18"></ext:Revision>
+        <ext:Revision name="B" date="2025-09-30" eco="ECO-0402" massKg="0.16"></ext:Revision>
         <ext:MassOption id="DATA-COIL" label="Retirer de la nomenclature (géométrie d'étude)" kind="DATA" massFactor="0.0" costDeltaEur="0.0" requalWeeks="0" oneOffEur="0" feasibility="HIGH" spaceImpact="Aucun." risk="Aucun : correction de données, à confirmer avec l'OEM."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_14" plmId="prd-12535825-00000120" name="ECAR-3D Stator Core" criticality="A" safetyStockDays="5" usageKg="31.0" conversionEur="46.7" maturityDate="2026-06-12" plannedRelease="2027-01-20" blocking="Essais de pertes fer sur la révision C à clôturer." sourcingNote="Matrice progressive propriété de Voltaron. Slovlam est en cours de PPAP, Yangtze seulement identifié." process="Découpe progressive, empilage et assemblage du paquet de tôles" processRating="4" precisionRating="4" operations="7">
+      <ext:Part ref="ID_14" criticality="A" safetyStockDays="5" usageKg="31.0" conversionEur="46.7" maturityDate="2026-06-12" plannedRelease="2027-01-20" process="Découpe progressive, empilage et assemblage du paquet de tôles" processRating="4" precisionRating="4" operations="7">
         <ext:Sourcing supplier="SUP-01" role="PRIMARY" sharePct="100" leadTimeDays="15" transitDays="2" capacityPerWeek="1300" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="118.0" ppapDate="2026-04-15" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-02" role="CANDIDATE" sharePct="0" leadTimeDays="18" transitDays="3" capacityPerWeek="700" qualification="IN_PROGRESS" requalWeeks="12" rampUpWeeks="3" switchingCostEur="420000" priceClause="INDEX_Q" unitPriceEur="111.0" ppapDate="2027-01-29"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-03" role="CANDIDATE" sharePct="0" leadTimeDays="60" transitDays="42" capacityPerWeek="1500" qualification="NOT_STARTED" requalWeeks="38" rampUpWeeks="6" switchingCostEur="650000" priceClause="INDEX_Q" unitPriceEur="96.0"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-01-20" eco="ECO-0097" reason="Création : tôles M270-35A." massKg="22.4" material="Electrical steel M270-35A (laminated)"></ext:Revision>
-        <ext:Revision name="B" date="2025-08-12" eco="ECO-0366" reason="Passage de M270-35A à M235-35A pour réduire les pertes fer." massKg="22.4"></ext:Revision>
-        <ext:Revision name="C" date="2026-03-03" eco="ECO-0655" reason="Réduction de la hauteur de culasse de 2 mm." massKg="21.5"></ext:Revision>
+        <ext:Revision name="A" date="2025-01-20" eco="ECO-0097" massKg="22.4" material="Electrical steel M270-35A (laminated)"></ext:Revision>
+        <ext:Revision name="B" date="2025-08-12" eco="ECO-0366" massKg="22.4"></ext:Revision>
+        <ext:Revision name="C" date="2026-03-03" eco="ECO-0655" massKg="21.5"></ext:Revision>
         <ext:MassOption id="CORE-YOKE" label="Culasse amincie et encoches optimisées" kind="DESIGN" massFactor="0.96" costDeltaEur="0.0" requalWeeks="26" oneOffEur="180000" feasibility="MEDIUM" spaceImpact="Aucun : diamètre extérieur inchangé." risk="Moyen : saturation magnétique à revérifier par simulation."></ext:MassOption>
         <ext:MassOption id="CORE-NO20" label="Tôle mince NO20 et paquet raccourci de 5 %" kind="MATERIAL" massFactor="0.95" costDeltaEur="21.0" requalWeeks="30" oneOffEur="240000" feasibility="MEDIUM" spaceImpact="Gain : longueur active réduite de 7 mm." risk="Moyen : gain de rendement de 0,5 point, mais tôle plus chère et moins disponible." newMaterial="Electrical steel NO20 (0.20 mm)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_16" plmId="prd-12535825-00000121" name="ECAR-3D_Stator Coils" criticality="A" safetyStockDays="6" usageKg="7.7" conversionEur="44.0" maturityDate="2026-09-08" plannedRelease="2027-03-19" blocking="Refonte hairpin (pertes AC) : essais thermiques en cours, date après le jalon." process="Épingles : formage, insertion, torsadage, soudage laser, imprégnation" processRating="5" precisionRating="4" operations="12">
+      <ext:Part ref="ID_16" criticality="A" safetyStockDays="6" usageKg="7.7" conversionEur="44.0" maturityDate="2026-09-08" plannedRelease="2027-03-19" process="Épingles : formage, insertion, torsadage, soudage laser, imprégnation" processRating="5" precisionRating="4" operations="12">
         <ext:Sourcing supplier="SUP-04" role="PRIMARY" sharePct="70" leadTimeDays="12" transitDays="2" capacityPerWeek="900" qualification="CONDITIONAL" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_M" unitPriceEur="159.5" ppapDate="2027-02-26" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-05" role="SECONDARY" sharePct="30" leadTimeDays="20" transitDays="5" capacityPerWeek="450" qualification="CONDITIONAL" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="INDEX_M" unitPriceEur="151.0" ppapDate="2027-03-05" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-06" role="CANDIDATE" sharePct="0" leadTimeDays="16" transitDays="4" capacityPerWeek="500" qualification="IN_PROGRESS" requalWeeks="14" rampUpWeeks="4" switchingCostEur="190000" priceClause="INDEX_M" unitPriceEur="156.0" ppapDate="2027-02-12"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-01-20" eco="ECO-0099" reason="Création : bobinage en fil rond." massKg="7.9"></ext:Revision>
-        <ext:Revision name="B" date="2026-09-08" eco="ECO-0912" reason="Passage en épingles (hairpin), 8 conducteurs par encoche, pour réduire les pertes AC." massKg="7.2"></ext:Revision>
+        <ext:Revision name="A" date="2025-01-20" eco="ECO-0099" massKg="7.9"></ext:Revision>
+        <ext:Revision name="B" date="2026-09-08" eco="ECO-0912" massKg="7.2"></ext:Revision>
         <ext:MassOption id="COIL-AL" label="Épingles en aluminium" kind="MATERIAL" massFactor="0.5" costDeltaEur="-84.0" requalWeeks="78" oneOffEur="1600000" feasibility="LOW" spaceImpact="Conflit : section à multiplier par 1,64, soit stator plus long de 40 mm ou plus large de 12 mm." risk="Élevé : rendement en baisse d'environ 1,2 point, refonte électromagnétique complète." newMaterial="Aluminium wire EN AW-1370 (enamelled)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_20" plmId="prd-12535825-00000122" name="ECAR-3D_DifferentialCasing" criticality="B" safetyStockDays="8" usageKg="4.6" conversionEur="23.03" maturityDate="2026-02-17" process="Fonderie de fonte GS, usinage multi-faces" processRating="3" precisionRating="4" operations="7">
+      <ext:Part ref="ID_20" criticality="B" safetyStockDays="8" usageKg="4.6" conversionEur="23.03" maturityDate="2026-02-17" process="Fonderie de fonte GS, usinage multi-faces" processRating="3" precisionRating="4" operations="7">
         <ext:Sourcing supplier="SUP-18" role="PRIMARY" sharePct="75" leadTimeDays="25" transitDays="2" capacityPerWeek="900" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="27.4" ppapDate="2026-01-22" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-19" role="SECONDARY" sharePct="25" leadTimeDays="35" transitDays="12" capacityPerWeek="500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="24.8" ppapDate="2026-02-05" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-25" eco="ECO-0121" reason="Création du boîtier." massKg="3.8"></ext:Revision>
-        <ext:Revision name="B" date="2025-10-07" eco="ECO-0431" reason="Allègement du voile et nervures de renfort." massKg="3.6"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-25" eco="ECO-0121" massKg="3.8"></ext:Revision>
+        <ext:Revision name="B" date="2025-10-07" eco="ECO-0431" massKg="3.6"></ext:Revision>
         <ext:MassOption id="DIFF-ADI" label="Fonte ADI et parois réduites" kind="MATERIAL" massFactor="0.88" costDeltaEur="2.5" requalWeeks="20" oneOffEur="70000" feasibility="MEDIUM" spaceImpact="Aucun." risk="Moyen : traitement thermique supplémentaire, usinage plus difficile." newMaterial="Austempered ductile iron ADI"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_22" plmId="prd-12535825-00000123" name="ECAR-3D_Pin" criticality="C" safetyStockDays="10" usageKg="0.45" conversionEur="3.44" maturityDate="2025-12-09" process="Décolletage, cémentation et rectification" processRating="2" precisionRating="3" operations="5">
+      <ext:Part ref="ID_22" criticality="C" safetyStockDays="10" usageKg="0.45" conversionEur="3.44" maturityDate="2025-12-09" process="Décolletage, cémentation et rectification" processRating="2" precisionRating="3" operations="5">
         <ext:Sourcing supplier="SUP-25" role="PRIMARY" sharePct="80" leadTimeDays="15" transitDays="2" capacityPerWeek="1400" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="4.0" ppapDate="2025-11-14" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-21" role="SECONDARY" sharePct="20" leadTimeDays="18" transitDays="2" capacityPerWeek="500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="3.8" ppapDate="2025-11-28" contractEnd="2027-12-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-04" eco="ECO-0124" reason="Création de l'axe de satellites." massKg="0.35"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-04" eco="ECO-0124" massKg="0.35"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_24" plmId="prd-12535825-00000124" name="ECAR-3D_DifferentialBevelGearTM_Bevel" criticality="B" safetyStockDays="8" usageKg="0.75" conversionEur="7.42" maturityDate="2025-12-09" process="Forgeage de précision, cémentation, finition de denture conique" processRating="3" precisionRating="4" operations="7">
+      <ext:Part ref="ID_24" criticality="B" safetyStockDays="8" usageKg="0.75" conversionEur="7.42" maturityDate="2025-12-09" process="Forgeage de précision, cémentation, finition de denture conique" processRating="3" precisionRating="4" operations="7">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="70" leadTimeDays="30" transitDays="2" capacityPerWeek="1800" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="8.4" ppapDate="2025-11-20" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-12" role="SECONDARY" sharePct="30" leadTimeDays="32" transitDays="3" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="8.0" ppapDate="2025-12-02" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-04" eco="ECO-0125" reason="Création du satellite conique." massKg="0.55"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-04" eco="ECO-0125" massKg="0.55"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_26" plmId="prd-12535825-00000125" name="ECAR-3D_DifferentialSideShaft" criticality="B" safetyStockDays="8" usageKg="1.2" conversionEur="10.94" maturityDate="2025-12-09" process="Forgeage de précision, cannelures, cémentation et rectification" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_26" criticality="B" safetyStockDays="8" usageKg="1.2" conversionEur="10.94" maturityDate="2025-12-09" process="Forgeage de précision, cannelures, cémentation et rectification" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="70" leadTimeDays="30" transitDays="2" capacityPerWeek="1800" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="12.5" ppapDate="2025-11-20" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-12" role="SECONDARY" sharePct="30" leadTimeDays="32" transitDays="3" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="11.9" ppapDate="2025-12-02" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-04" eco="ECO-0126" reason="Création du planétaire." massKg="0.9"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-04" eco="ECO-0126" massKg="0.9"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_30" plmId="prd-12535825-00000094" name="ECAR-3D_HSH_BEA1" criticality="B" safetyStockDays="15" usageKg="0.85" conversionEur="16.05" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_30" criticality="B" safetyStockDays="15" usageKg="0.85" conversionEur="16.05" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-15" role="PRIMARY" sharePct="60" leadTimeDays="25" transitDays="4" capacityPerWeek="1500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="17.5" ppapDate="2025-10-14" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-16" role="SECONDARY" sharePct="40" leadTimeDays="21" transitDays="2" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="18.0" ppapDate="2025-10-21" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0115" reason="Création : roulement catalogue." massKg="0.6"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0115" massKg="0.6"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_32" plmId="prd-12535825-00000095" name="ECAR-3D_HSH_BEA2" criticality="B" safetyStockDays="15" usageKg="0.7" conversionEur="13.81" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_32" criticality="B" safetyStockDays="15" usageKg="0.7" conversionEur="13.81" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-15" role="PRIMARY" sharePct="60" leadTimeDays="25" transitDays="4" capacityPerWeek="1500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="15.0" ppapDate="2025-10-14" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-16" role="SECONDARY" sharePct="40" leadTimeDays="21" transitDays="2" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="15.4" ppapDate="2025-10-21" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0116" reason="Création : roulement catalogue." massKg="0.5"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0116" massKg="0.5"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_34" plmId="prd-12535825-00000096" name="ECAR-3D_LSH_BEA1" criticality="B" safetyStockDays="15" usageKg="1.9" conversionEur="17.77" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_34" criticality="B" safetyStockDays="15" usageKg="1.9" conversionEur="17.77" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-16" role="PRIMARY" sharePct="70" leadTimeDays="21" transitDays="2" capacityPerWeek="1300" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="21.0" ppapDate="2025-10-21" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-15" role="SECONDARY" sharePct="30" leadTimeDays="25" transitDays="4" capacityPerWeek="900" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="21.6" ppapDate="2025-10-14" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-17" role="CANDIDATE" sharePct="0" leadTimeDays="63" transitDays="42" capacityPerWeek="1500" qualification="IN_PROGRESS" requalWeeks="10" rampUpWeeks="4" switchingCostEur="45000" priceClause="FIXED" unitPriceEur="19.5" ppapDate="2027-01-15"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0117" reason="Création : roulement catalogue." massKg="1.4"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0117" massKg="1.4"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_36" plmId="prd-12535825-00000097" name="ECAR-3D_LSH_BEA2" criticality="B" safetyStockDays="15" usageKg="1.65" conversionEur="16.2" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_36" criticality="B" safetyStockDays="15" usageKg="1.65" conversionEur="16.2" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-16" role="PRIMARY" sharePct="70" leadTimeDays="21" transitDays="2" capacityPerWeek="1300" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="19.0" ppapDate="2025-10-21" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-15" role="SECONDARY" sharePct="30" leadTimeDays="25" transitDays="4" capacityPerWeek="900" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="19.5" ppapDate="2025-10-14" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0118" reason="Création : roulement catalogue." massKg="1.2"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0118" massKg="1.2"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_38" plmId="prd-12535825-00000098" name="ECAR-3D_ISH_BEA1" criticality="B" safetyStockDays="15" usageKg="1.25" conversionEur="13.88" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_38" criticality="B" safetyStockDays="15" usageKg="1.25" conversionEur="13.88" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-15" role="PRIMARY" sharePct="60" leadTimeDays="25" transitDays="4" capacityPerWeek="1500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="16.0" ppapDate="2025-10-14" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-16" role="SECONDARY" sharePct="40" leadTimeDays="21" transitDays="2" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="16.4" ppapDate="2025-10-21" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0119" reason="Création : roulement catalogue." massKg="0.9"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0119" massKg="0.9"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_40" plmId="prd-12535825-00000099" name="ECAR-3D_ISH_BEA2" criticality="B" safetyStockDays="15" usageKg="1.1" conversionEur="12.63" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
+      <ext:Part ref="ID_40" criticality="B" safetyStockDays="15" usageKg="1.1" conversionEur="12.63" maturityDate="2025-11-05" process="Roulement de précision catalogue" processRating="3" precisionRating="4" operations="8">
         <ext:Sourcing supplier="SUP-15" role="PRIMARY" sharePct="60" leadTimeDays="25" transitDays="4" capacityPerWeek="1500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="14.5" ppapDate="2025-10-14" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-16" role="SECONDARY" sharePct="40" leadTimeDays="21" transitDays="2" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="14.9" ppapDate="2025-10-21" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-18" eco="ECO-0120" reason="Création : roulement catalogue." massKg="0.8"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-18" eco="ECO-0120" massKg="0.8"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_42" plmId="prd-12535825-00000100" name="ECAR-3D_GearWheel" criticality="A" safetyStockDays="8" usageKg="1.9" conversionEur="22.53" maturityDate="2026-01-27" process="Taillage, cémentation et rectification de denture" processRating="4" precisionRating="5" operations="12">
+      <ext:Part ref="ID_42" criticality="A" safetyStockDays="8" usageKg="1.9" conversionEur="22.53" maturityDate="2026-01-27" process="Taillage, cémentation et rectification de denture" processRating="4" precisionRating="5" operations="12">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="70" leadTimeDays="30" transitDays="2" capacityPerWeek="1300" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="25.0" ppapDate="2025-12-16" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-12" role="SECONDARY" sharePct="30" leadTimeDays="30" transitDays="3" capacityPerWeek="800" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="23.0" ppapDate="2026-01-13" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-03" eco="ECO-0104" reason="Création : pignon d'entrée, 1er étage." massKg="1.3"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-03" eco="ECO-0104" massKg="1.3"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_44" plmId="prd-12535825-00000101" name="ECAR-3D_GearWheel" criticality="A" safetyStockDays="8" usageKg="5.4" conversionEur="38.98" maturityDate="2026-05-26" plannedRelease="2026-12-18" blocking="Essai NVH final prévu en décembre." process="Taillage, cémentation et rectification de denture" processRating="4" precisionRating="5" operations="12">
+      <ext:Part ref="ID_44" criticality="A" safetyStockDays="8" usageKg="5.4" conversionEur="38.98" maturityDate="2026-05-26" plannedRelease="2026-12-18" process="Taillage, cémentation et rectification de denture" processRating="4" precisionRating="5" operations="12">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="70" leadTimeDays="30" transitDays="2" capacityPerWeek="900" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="46.0" ppapDate="2026-05-12" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-12" role="SECONDARY" sharePct="30" leadTimeDays="32" transitDays="3" capacityPerWeek="500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="43.5" ppapDate="2026-05-19" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-03" eco="ECO-0105" reason="Création : roue du 1er étage." massKg="4.2"></ext:Revision>
-        <ext:Revision name="B" date="2025-09-09" eco="ECO-0395" reason="Déport de denture modifié pour réduire le bruit." massKg="4.0"></ext:Revision>
-        <ext:Revision name="C" date="2026-04-14" eco="ECO-0702" reason="Voile allégé." massKg="3.9"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-03" eco="ECO-0105" massKg="4.2"></ext:Revision>
+        <ext:Revision name="B" date="2025-09-09" eco="ECO-0395" massKg="4.0"></ext:Revision>
+        <ext:Revision name="C" date="2026-04-14" eco="ECO-0702" massKg="3.9"></ext:Revision>
         <ext:MassOption id="GEARC-WEB" label="Voile allégé par perçages" kind="DESIGN" massFactor="0.9" costDeltaEur="1.6" requalWeeks="24" oneOffEur="60000" feasibility="MEDIUM" spaceImpact="Aucun." risk="Moyen : essai NVH et tenue du voile à refaire."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_46" plmId="prd-12535825-00000102" name="ECAR-3D_GearWheel" criticality="A" safetyStockDays="8" usageKg="2.3" conversionEur="25.01" maturityDate="2025-12-16" process="Taillage, cémentation et rectification de denture" processRating="4" precisionRating="5" operations="12">
+      <ext:Part ref="ID_46" criticality="A" safetyStockDays="8" usageKg="2.3" conversionEur="25.01" maturityDate="2025-12-16" process="Taillage, cémentation et rectification de denture" processRating="4" precisionRating="5" operations="12">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="70" leadTimeDays="30" transitDays="2" capacityPerWeek="900" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="28.0" ppapDate="2025-11-25" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-12" role="SECONDARY" sharePct="30" leadTimeDays="32" transitDays="3" capacityPerWeek="500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="26.5" ppapDate="2025-12-09" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-03" eco="ECO-0106" reason="Création : pignon du 2e étage." massKg="1.7"></ext:Revision>
-        <ext:Revision name="B" date="2025-09-09" eco="ECO-0396" reason="Bombé de denture ajusté après simulation." massKg="1.6"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-03" eco="ECO-0106" massKg="1.7"></ext:Revision>
+        <ext:Revision name="B" date="2025-09-09" eco="ECO-0396" massKg="1.6"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_48" plmId="prd-12535825-00000103" name="ECAR-3D_GearWheel" criticality="A" safetyStockDays="8" usageKg="10.4" conversionEur="57.98" maturityDate="2026-09-22" plannedRelease="2027-02-26" blocking="Micro-géométrie reprise après essais NVH : nouvelle campagne au banc en cours." sourcingNote="Moravia et Deccan sont à qualifier sur la révision D." process="Forgeage, taillage, cémentation, rectification avec micro-géométrie NVH" processRating="4" precisionRating="5" operations="13">
+      <ext:Part ref="ID_48" criticality="A" safetyStockDays="8" usageKg="10.4" conversionEur="57.98" maturityDate="2026-09-22" plannedRelease="2027-02-26" process="Forgeage, taillage, cémentation, rectification avec micro-géométrie NVH" processRating="4" precisionRating="5" operations="13">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="100" leadTimeDays="30" transitDays="2" capacityPerWeek="1100" qualification="CONDITIONAL" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="71.5" ppapDate="2027-02-19" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-12" role="CANDIDATE" sharePct="0" leadTimeDays="32" transitDays="3" capacityPerWeek="700" qualification="IN_PROGRESS" requalWeeks="16" rampUpWeeks="4" switchingCostEur="210000" priceClause="FIXED" unitPriceEur="67.0" ppapDate="2027-02-26"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-13" role="CANDIDATE" sharePct="0" leadTimeDays="65" transitDays="35" capacityPerWeek="1200" qualification="NOT_STARTED" requalWeeks="30" rampUpWeeks="6" switchingCostEur="280000" priceClause="FIXED" unitPriceEur="60.0"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-03" eco="ECO-0107" reason="Création : couronne du 2e étage." massKg="7.9"></ext:Revision>
-        <ext:Revision name="B" date="2025-09-09" eco="ECO-0397" reason="Correction d'hélice." massKg="7.7"></ext:Revision>
-        <ext:Revision name="C" date="2026-02-17" eco="ECO-0634" reason="Perçages d'allègement du voile." massKg="7.5"></ext:Revision>
-        <ext:Revision name="D" date="2026-09-22" eco="ECO-0931" reason="Micro-géométrie reprise après essais NVH (raie d'engrènement)." massKg="7.4"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-03" eco="ECO-0107" massKg="7.9"></ext:Revision>
+        <ext:Revision name="B" date="2025-09-09" eco="ECO-0397" massKg="7.7"></ext:Revision>
+        <ext:Revision name="C" date="2026-02-17" eco="ECO-0634" massKg="7.5"></ext:Revision>
+        <ext:Revision name="D" date="2026-09-22" eco="ECO-0931" massKg="7.4"></ext:Revision>
         <ext:MassOption id="GEARD-WEB" label="Voile aminci et perçages supplémentaires" kind="DESIGN" massFactor="0.88" costDeltaEur="3.2" requalWeeks="24" oneOffEur="110000" feasibility="MEDIUM" spaceImpact="Aucun." risk="Moyen : révision D encore en essai NVH, à enchaîner avec la campagne en cours."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_50" plmId="prd-12535825-00000104" name="ECAR-3D_ISH" criticality="A" safetyStockDays="8" usageKg="4.6" conversionEur="38.02" maturityDate="2026-06-02" plannedRelease="2026-12-18" blocking="Attente de la clôture de l'essai NVH du 1er étage." process="Forgeage, tournage, taillage, cémentation et rectification" processRating="4" precisionRating="5" operations="11">
+      <ext:Part ref="ID_50" criticality="A" safetyStockDays="8" usageKg="4.6" conversionEur="38.02" maturityDate="2026-06-02" plannedRelease="2026-12-18" process="Forgeage, tournage, taillage, cémentation et rectification" processRating="4" precisionRating="5" operations="11">
         <ext:Sourcing supplier="SUP-11" role="PRIMARY" sharePct="100" leadTimeDays="30" transitDays="2" capacityPerWeek="1300" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="44.0" ppapDate="2026-05-12" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-14" role="CANDIDATE" sharePct="0" leadTimeDays="22" transitDays="2" capacityPerWeek="800" qualification="NOT_STARTED" requalWeeks="20" rampUpWeeks="4" switchingCostEur="150000" priceClause="FIXED" unitPriceEur="46.5"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-02-10" eco="ECO-0110" reason="Création de l'arbre intermédiaire." massKg="3.6"></ext:Revision>
-        <ext:Revision name="B" date="2025-10-21" eco="ECO-0450" reason="Épaulement de roulement renforcé, section allégée." massKg="3.4"></ext:Revision>
+        <ext:Revision name="A" date="2025-02-10" eco="ECO-0110" massKg="3.6"></ext:Revision>
+        <ext:Revision name="B" date="2025-10-21" eco="ECO-0450" massKg="3.4"></ext:Revision>
         <ext:MassOption id="ISH-HOLLOW" label="Arbre creux" kind="DESIGN" massFactor="0.75" costDeltaEur="6.5" requalWeeks="22" oneOffEur="140000" feasibility="MEDIUM" spaceImpact="Aucun." risk="Moyen : emmanchement des pignons à revalider."></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_53" plmId="prd-12535825-00000105" name="ECAR-3D_SPY joint" criticality="A" safetyStockDays="20" usageKg="0.03" conversionEur="7.36" maturityDate="2026-03-24" sourcingNote="Lèvre haute vitesse validée uniquement chez Elastotec : aucune alternative référencée." process="Moulage FKM sur armature acier, lèvre haute vitesse" processRating="3" precisionRating="3" operations="4">
+      <ext:Part ref="ID_53" criticality="A" safetyStockDays="20" usageKg="0.03" conversionEur="7.36" maturityDate="2026-03-24" process="Moulage FKM sur armature acier, lèvre haute vitesse" processRating="3" precisionRating="3" operations="4">
         <ext:Sourcing supplier="SUP-23" role="PRIMARY" sharePct="100" leadTimeDays="30" transitDays="2" capacityPerWeek="1500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="8.5" ppapDate="2026-03-10" contractEnd="2027-12-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-04-01" eco="ECO-0156" reason="Création : joint à lèvre FKM haute vitesse." massKg="0.06"></ext:Revision>
+        <ext:Revision name="A" date="2025-04-01" eco="ECO-0156" massKg="0.06"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_55" plmId="prd-12535825-00000106" name="ECAR-3D_left housing" criticality="A" safetyStockDays="6" usageKg="9.8" conversionEur="38.0" maturityDate="2026-06-30" plannedRelease="2027-01-29" blocking="Modifiée après le gel sans nouvelle révision : à régulariser." sourcingNote="Moule HPDC propriété de Garda. Bohemia est en cours de PPAP avec un second moule à financer." process="Fonderie sous pression, usinage des portées, contrôle d'étanchéité" processRating="4" precisionRating="4" operations="9">
+      <ext:Part ref="ID_55" criticality="A" safetyStockDays="6" usageKg="9.8" conversionEur="38.0" maturityDate="2026-06-30" plannedRelease="2027-01-29" process="Fonderie sous pression, usinage des portées, contrôle d'étanchéité" processRating="4" precisionRating="4" operations="9">
         <ext:Sourcing supplier="SUP-07" role="PRIMARY" sharePct="100" leadTimeDays="21" transitDays="3" capacityPerWeek="1200" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="66.9" ppapDate="2026-06-16" contractEnd="2028-03-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-08" role="CANDIDATE" sharePct="0" leadTimeDays="24" transitDays="3" capacityPerWeek="800" qualification="IN_PROGRESS" requalWeeks="20" rampUpWeeks="6" switchingCostEur="620000" priceClause="INDEX_Q" unitPriceEur="70.5" ppapDate="2027-03-26"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-18" eco="ECO-0142" reason="Création du demi-carter gauche." massKg="9.1"></ext:Revision>
-        <ext:Revision name="B" date="2026-01-13" eco="ECO-0588" reason="Nervurage optimisé, voile de 3,5 à 3,0 mm." massKg="8.4"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-18" eco="ECO-0142" massKg="9.1"></ext:Revision>
+        <ext:Revision name="B" date="2026-01-13" eco="ECO-0588" massKg="8.4"></ext:Revision>
         <ext:MassOption id="LEFT-TOPO" label="Optimisation topologique, voile 2,5 mm" kind="DESIGN" massFactor="0.9" costDeltaEur="0.5" requalWeeks="16" oneOffEur="95000" feasibility="HIGH" spaceImpact="Aucun." risk="Faible : retouche de moule, contrôle de la tenue vibratoire."></ext:MassOption>
         <ext:MassOption id="LEFT-MG" label="Magnésium AM60B en HPDC" kind="MATERIAL" massFactor="0.72" costDeltaEur="7.5" requalWeeks="40" oneOffEur="780000" feasibility="MEDIUM" spaceImpact="Local : parois 15 % plus épaisses, inserts acier aux portées." risk="Élevé : corrosion, fluage aux portées, offre très concentrée en Chine, CO2 matière en forte hausse." newMaterial="Magnesium AM60B (HPDC)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_57" plmId="prd-12535825-00000107" name="ECAR-3D_right housing" criticality="A" safetyStockDays="6" usageKg="6.9" conversionEur="29.0" maturityDate="2026-08-25" plannedRelease="2027-02-05" blocking="Révision C (nouvel orifice de refroidissement) à valider en étanchéité." sourcingNote="Moule HPDC propriété de Garda. Bohemia est en cours de PPAP avec un second moule à financer." process="Fonderie sous pression, usinage des portées, contrôle d'étanchéité" processRating="4" precisionRating="4" operations="9">
+      <ext:Part ref="ID_57" criticality="A" safetyStockDays="6" usageKg="6.9" conversionEur="29.0" maturityDate="2026-08-25" plannedRelease="2027-02-05" process="Fonderie sous pression, usinage des portées, contrôle d'étanchéité" processRating="4" precisionRating="4" operations="9">
         <ext:Sourcing supplier="SUP-07" role="PRIMARY" sharePct="100" leadTimeDays="21" transitDays="3" capacityPerWeek="1200" qualification="CONDITIONAL" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="49.4" ppapDate="2027-01-22" contractEnd="2028-03-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-08" role="CANDIDATE" sharePct="0" leadTimeDays="24" transitDays="3" capacityPerWeek="800" qualification="IN_PROGRESS" requalWeeks="20" rampUpWeeks="6" switchingCostEur="480000" priceClause="INDEX_Q" unitPriceEur="52.0" ppapDate="2027-03-26"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-18" eco="ECO-0143" reason="Création du demi-carter droit." massKg="6.4"></ext:Revision>
-        <ext:Revision name="B" date="2025-12-02" eco="ECO-0541" reason="Renfort des bossages de fixation." massKg="6.1"></ext:Revision>
-        <ext:Revision name="C" date="2026-08-25" eco="ECO-0889" reason="Nouvel orifice de refroidissement, voile aminci." massKg="5.9"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-18" eco="ECO-0143" massKg="6.4"></ext:Revision>
+        <ext:Revision name="B" date="2025-12-02" eco="ECO-0541" massKg="6.1"></ext:Revision>
+        <ext:Revision name="C" date="2026-08-25" eco="ECO-0889" massKg="5.9"></ext:Revision>
         <ext:MassOption id="RIGHT-TOPO" label="Optimisation topologique, voile 2,5 mm" kind="DESIGN" massFactor="0.9" costDeltaEur="0.4" requalWeeks="16" oneOffEur="80000" feasibility="HIGH" spaceImpact="Aucun." risk="Faible : retouche de moule, contrôle de la tenue vibratoire."></ext:MassOption>
         <ext:MassOption id="RIGHT-MG" label="Magnésium AM60B en HPDC" kind="MATERIAL" massFactor="0.72" costDeltaEur="5.5" requalWeeks="40" oneOffEur="620000" feasibility="MEDIUM" spaceImpact="Local : parois 15 % plus épaisses, inserts acier aux portées." risk="Élevé : corrosion, fluage aux portées, offre très concentrée en Chine, CO2 matière en forte hausse." newMaterial="Magnesium AM60B (HPDC)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_59" plmId="prd-12535825-00000108" name="ECAR-3D_bearing housing" criticality="B" safetyStockDays="8" usageKg="2.5" conversionEur="12.03" maturityDate="2026-03-03" process="Fonderie sous pression, usinage de la portée" processRating="3" precisionRating="4" operations="6">
+      <ext:Part ref="ID_59" criticality="B" safetyStockDays="8" usageKg="2.5" conversionEur="12.03" maturityDate="2026-03-03" process="Fonderie sous pression, usinage de la portée" processRating="3" precisionRating="4" operations="6">
         <ext:Sourcing supplier="SUP-07" role="PRIMARY" sharePct="70" leadTimeDays="21" transitDays="3" capacityPerWeek="1000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="19.4" ppapDate="2026-02-17" contractEnd="2028-03-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-09" role="SECONDARY" sharePct="30" leadTimeDays="28" transitDays="6" capacityPerWeek="500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="17.6" ppapDate="2026-02-24" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-04-08" eco="ECO-0158" reason="Création du logement de roulement." massKg="2.2"></ext:Revision>
-        <ext:Revision name="B" date="2025-12-16" eco="ECO-0560" reason="Reprise de l'ajustement de roulement." massKg="2.1"></ext:Revision>
+        <ext:Revision name="A" date="2025-04-08" eco="ECO-0158" massKg="2.2"></ext:Revision>
+        <ext:Revision name="B" date="2025-12-16" eco="ECO-0560" massKg="2.1"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_61" plmId="prd-12535825-00000109" name="ECAR-3D_motor" criticality="A" safetyStockDays="6" usageKg="8.4" conversionEur="46.02" maturityDate="2026-09-01" plannedRelease="2027-01-15" blocking="Rapport d'étanchéité de la révision C attendu." sourcingNote="Coulée basse pression et noyaux sable propres à Garda : aucune alternative référencée." process="Coulée basse pression à noyaux sable, usinage, logement du stator fretté" processRating="5" precisionRating="4" operations="10">
+      <ext:Part ref="ID_61" criticality="A" safetyStockDays="6" usageKg="8.4" conversionEur="46.02" maturityDate="2026-09-01" plannedRelease="2027-01-15" process="Coulée basse pression à noyaux sable, usinage, logement du stator fretté" processRating="5" precisionRating="4" operations="10">
         <ext:Sourcing supplier="SUP-07" role="PRIMARY" sharePct="100" leadTimeDays="21" transitDays="3" capacityPerWeek="1150" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="INDEX_Q" unitPriceEur="75.0" ppapDate="2026-08-28" contractEnd="2028-03-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-03-25" eco="ECO-0150" reason="Création : carter en AlSi9Cu3 sous pression." massKg="7.6" material="Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)"></ext:Revision>
-        <ext:Revision name="B" date="2025-09-23" eco="ECO-0411" reason="Passage en AlSi10Mg coulé basse pression (conductivité thermique et étanchéité)." massKg="7.3"></ext:Revision>
-        <ext:Revision name="C" date="2026-05-12" eco="ECO-0748" reason="Intégration du guidage de la chemise de refroidissement." massKg="7.0"></ext:Revision>
+        <ext:Revision name="A" date="2025-03-25" eco="ECO-0150" massKg="7.6" material="Aluminium alloy EN AC-AlSi9Cu3(Fe) (HPDC)"></ext:Revision>
+        <ext:Revision name="B" date="2025-09-23" eco="ECO-0411" massKg="7.3"></ext:Revision>
+        <ext:Revision name="C" date="2026-05-12" eco="ECO-0748" massKg="7.0"></ext:Revision>
         <ext:MassOption id="MOTOR-THIN" label="Parois réduites et noyau optimisé" kind="DESIGN" massFactor="0.9" costDeltaEur="1.5" requalWeeks="18" oneOffEur="120000" feasibility="HIGH" spaceImpact="Aucun." risk="Faible à moyen : contrôle de l'étanchéité et de la tenue du frettage."></ext:MassOption>
         <ext:MassOption id="MOTOR-MG" label="Magnésium AE44" kind="MATERIAL" massFactor="0.74" costDeltaEur="11.0" requalWeeks="52" oneOffEur="950000" feasibility="LOW" spaceImpact="Conflit : dilatation différente, le frettage du stator se desserre à chaud." risk="Élevé : fluage, corrosion par le liquide de refroidissement, offre concentrée en Chine." newMaterial="Magnesium AE44 (HPDC)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_63" plmId="prd-12535825-00000110" name="ECAR-3D_plate bearing motor" criticality="B" safetyStockDays="8" usageKg="1.5" conversionEur="5.53" maturityDate="2026-06-30" plannedRelease="2027-03-05" blocking="Fournisseur non désigné : décision de faire ou d'acheter attendue, date après le jalon." process="Découpe-emboutissage, usinage de la portée" processRating="2" precisionRating="4" operations="5">
-        <ext:Revision name="A" date="2025-04-15" eco="ECO-0163" reason="Création du flasque de roulement." massKg="1.2"></ext:Revision>
-        <ext:Revision name="B" date="2026-06-30" eco="ECO-0812" reason="Ajout d'un épaulement de centrage." massKg="1.1"></ext:Revision>
+      <ext:Part ref="ID_63" criticality="B" safetyStockDays="8" usageKg="1.5" conversionEur="5.53" maturityDate="2026-06-30" plannedRelease="2027-03-05" process="Découpe-emboutissage, usinage de la portée" processRating="2" precisionRating="4" operations="5">
+        <ext:Revision name="A" date="2025-04-15" eco="ECO-0163" massKg="1.2"></ext:Revision>
+        <ext:Revision name="B" date="2026-06-30" eco="ECO-0812" massKg="1.1"></ext:Revision>
         <ext:MassOption id="PLATE-AL" label="Flasque en EN AW-6082 avec bague acier" kind="MATERIAL" massFactor="0.5" costDeltaEur="5.0" requalWeeks="14" oneOffEur="40000" feasibility="MEDIUM" spaceImpact="Local : flasque 3 mm plus épais." risk="Moyen : dilatation à la portée de roulement, bague acier nécessaire." newMaterial="Aluminium alloy EN AW-6082-T6"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_65" plmId="prd-12535825-00000111" name="ECAR-3D_Transmission support" criticality="B" safetyStockDays="8" usageKg="3.7" conversionEur="12.68" maturityDate="2026-04-07" plannedRelease="2027-02-12" blocking="Pièce RELEASED alors que le PPAP d'Atlas n'est pas terminé." process="Fonderie sous pression, usinage des fixations" processRating="3" precisionRating="3" operations="6">
+      <ext:Part ref="ID_65" criticality="B" safetyStockDays="8" usageKg="3.7" conversionEur="12.68" maturityDate="2026-04-07" plannedRelease="2027-02-12" process="Fonderie sous pression, usinage des fixations" processRating="3" precisionRating="3" operations="6">
         <ext:Sourcing supplier="SUP-09" role="PRIMARY" sharePct="100" leadTimeDays="28" transitDays="6" capacityPerWeek="1100" qualification="IN_PROGRESS" requalWeeks="17" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="23.6" ppapDate="2027-02-12" contractEnd="2027-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-07" role="CANDIDATE" sharePct="0" leadTimeDays="21" transitDays="3" capacityPerWeek="900" qualification="NOT_STARTED" requalWeeks="22" rampUpWeeks="4" switchingCostEur="280000" priceClause="INDEX_Q" unitPriceEur="25.9"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-04-22" eco="ECO-0170" reason="Création du support." massKg="3.5"></ext:Revision>
-        <ext:Revision name="B" date="2026-02-03" eco="ECO-0611" reason="Optimisation topologique." massKg="3.2"></ext:Revision>
+        <ext:Revision name="A" date="2025-04-22" eco="ECO-0170" massKg="3.5"></ext:Revision>
+        <ext:Revision name="B" date="2026-02-03" eco="ECO-0611" massKg="3.2"></ext:Revision>
         <ext:MassOption id="SUPPORT-TOPO" label="Seconde passe d'optimisation topologique" kind="DESIGN" massFactor="0.88" costDeltaEur="0.2" requalWeeks="12" oneOffEur="55000" feasibility="HIGH" spaceImpact="Aucun." risk="Faible : contrôle de la tenue vibratoire."></ext:MassOption>
         <ext:MassOption id="SUPPORT-MG" label="Magnésium AM60B en HPDC" kind="MATERIAL" massFactor="0.72" costDeltaEur="2.8" requalWeeks="32" oneOffEur="260000" feasibility="MEDIUM" spaceImpact="Local : nervures épaissies." risk="Élevé : corrosion, offre concentrée en Chine, CO2 matière en forte hausse." newMaterial="Magnesium AM60B (HPDC)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_67" plmId="prd-12535825-00000112" name="ECAR-3D_90 degrees pipe" criticality="C" safetyStockDays="10" usageKg="0.13" conversionEur="2.09" maturityDate="2026-01-20" process="Injection plastique" processRating="2" precisionRating="2" operations="3">
+      <ext:Part ref="ID_67" criticality="C" safetyStockDays="10" usageKg="0.13" conversionEur="2.09" maturityDate="2026-01-20" process="Injection plastique" processRating="2" precisionRating="2" operations="3">
         <ext:Sourcing supplier="SUP-24" role="PRIMARY" sharePct="100" leadTimeDays="18" transitDays="2" capacityPerWeek="2600" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="2.6" ppapDate="2026-01-06" contractEnd="2027-12-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-04-29" eco="ECO-0176" reason="Création du raccord coudé." massKg="0.12"></ext:Revision>
+        <ext:Revision name="A" date="2025-04-29" eco="ECO-0176" massKg="0.12"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_69" plmId="prd-12535825-00000113" name="ECAR-3D_Screw D10 L115" criticality="C" safetyStockDays="15" usageKg="0.1" conversionEur="0.31" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
+      <ext:Part ref="ID_69" criticality="C" safetyStockDays="15" usageKg="0.1" conversionEur="0.31" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
         <ext:Sourcing supplier="SUP-20" role="PRIMARY" sharePct="60" leadTimeDays="14" transitDays="2" capacityPerWeek="6000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.45" ppapDate="2025-09-30" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-21" role="SECONDARY" sharePct="30" leadTimeDays="16" transitDays="2" capacityPerWeek="3000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.43" ppapDate="2025-09-30" contractEnd="2026-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-22" role="SECONDARY" sharePct="10" leadTimeDays="70" transitDays="40" capacityPerWeek="5000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.38" ppapDate="2025-10-07" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0181" reason="Création : vis catalogue." massKg="0.089"></ext:Revision>
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0181" massKg="0.089"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_71" plmId="prd-12535825-00000114" name="ECAR-3D_Screw D8 L50" criticality="C" safetyStockDays="15" usageKg="0.032" conversionEur="0.13" maturityDate="2026-08-04" plannedRelease="2026-12-11" blocking="Référence obsolète : à remplacer dans la nomenclature par la nouvelle vis de longueur corrigée." process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
+      <ext:Part ref="ID_71" criticality="C" safetyStockDays="15" usageKg="0.032" conversionEur="0.13" maturityDate="2026-08-04" plannedRelease="2026-12-11" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
         <ext:Sourcing supplier="SUP-20" role="PRIMARY" sharePct="60" leadTimeDays="14" transitDays="2" capacityPerWeek="20000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.17" ppapDate="2025-09-30" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-21" role="SECONDARY" sharePct="40" leadTimeDays="16" transitDays="2" capacityPerWeek="9000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.16" ppapDate="2025-09-30" contractEnd="2026-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0182" reason="Création : vis catalogue." massKg="0.028"></ext:Revision>
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0182" massKg="0.028"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_73" plmId="prd-12535825-00000115" name="ECAR-3D_MOTOR SCREW 1" criticality="C" safetyStockDays="15" usageKg="0.036" conversionEur="0.14" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
+      <ext:Part ref="ID_73" criticality="C" safetyStockDays="15" usageKg="0.036" conversionEur="0.14" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
         <ext:Sourcing supplier="SUP-20" role="PRIMARY" sharePct="100" leadTimeDays="14" transitDays="2" capacityPerWeek="5000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.19" ppapDate="2025-09-30" contractEnd="2027-12-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0183" reason="Création : vis catalogue." massKg="0.03"></ext:Revision>
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0183" massKg="0.03"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_74" plmId="prd-12535825-00000078" name="ECAR-3D_MOTOR SCREW 2" criticality="C" safetyStockDays="15" usageKg="0.056" conversionEur="0.17" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
+      <ext:Part ref="ID_74" criticality="C" safetyStockDays="15" usageKg="0.056" conversionEur="0.17" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
         <ext:Sourcing supplier="SUP-20" role="PRIMARY" sharePct="80" leadTimeDays="14" transitDays="2" capacityPerWeek="4000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.25" ppapDate="2025-09-30" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-22" role="SECONDARY" sharePct="20" leadTimeDays="70" transitDays="40" capacityPerWeek="2500" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.21" ppapDate="2025-10-07" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0184" reason="Création : vis catalogue." massKg="0.05"></ext:Revision>
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0184" massKg="0.05"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_76" plmId="prd-12535825-00000116" name="ECAR-3D_MOTOR SCREW" criticality="C" safetyStockDays="15" usageKg="0.032" conversionEur="0.12" maturityDate="2026-09-29" plannedRelease="2026-12-04" blocking="Prix non renseigné : devis attendu." process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
+      <ext:Part ref="ID_76" criticality="C" safetyStockDays="15" usageKg="0.032" conversionEur="0.12" maturityDate="2026-09-29" plannedRelease="2026-12-04" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
         <ext:Sourcing supplier="SUP-20" role="PRIMARY" sharePct="100" leadTimeDays="14" transitDays="2" capacityPerWeek="4000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" ppapDate="2025-09-30" contractEnd="2027-12-31"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0185" reason="Création : vis catalogue." massKg="0.028"></ext:Revision>
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0185" massKg="0.028"></ext:Revision>
       </ext:Part>
-      <ext:Part ref="ID_78" plmId="prd-12535825-00000117" name="ECAR-3D Screw D10 L155" criticality="C" safetyStockDays="15" usageKg="0.125" conversionEur="0.38" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
+      <ext:Part ref="ID_78" criticality="C" safetyStockDays="15" usageKg="0.125" conversionEur="0.38" maturityDate="2025-10-14" process="Vis catalogue : frappe à froid, roulage, revêtement lamellaire" processRating="1" precisionRating="2" operations="4">
         <ext:Sourcing supplier="SUP-20" role="PRIMARY" sharePct="60" leadTimeDays="14" transitDays="2" capacityPerWeek="21000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.55" ppapDate="2025-09-30" contractEnd="2027-12-31"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-21" role="SECONDARY" sharePct="30" leadTimeDays="16" transitDays="2" capacityPerWeek="9000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="2" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.52" ppapDate="2025-09-30" contractEnd="2026-06-30"></ext:Sourcing>
         <ext:Sourcing supplier="SUP-22" role="SECONDARY" sharePct="10" leadTimeDays="70" transitDays="40" capacityPerWeek="7000" qualification="APPROVED" requalWeeks="0" rampUpWeeks="3" switchingCostEur="0" priceClause="FIXED" unitPriceEur="0.46" ppapDate="2025-10-07" contractEnd="2027-06-30"></ext:Sourcing>
-        <ext:Revision name="A" date="2025-05-06" eco="ECO-0186" reason="Création : vis catalogue." massKg="0.113"></ext:Revision>
+        <ext:Revision name="A" date="2025-05-06" eco="ECO-0186" massKg="0.113"></ext:Revision>
         <ext:MassOption id="BOLT-AL" label="Vis en aluminium EN AW-6056" kind="MATERIAL" massFactor="0.4" costDeltaEur="1.2" requalWeeks="14" oneOffEur="45000" feasibility="MEDIUM" spaceImpact="Aucun : mêmes dimensions." risk="Moyen : précharge et fluage à revalider, couple de serrage à reprendre." newMaterial="Aluminium alloy EN AW-6056 (fasteners)"></ext:MassOption>
       </ext:Part>
-      <ext:Part ref="ID_2" plmId="prd-12535825-00000051" name="ECAR-EI_HSH_BEA3" maturityDate="2026-07-07" wrapperOf="ID_3"></ext:Part>
-      <ext:Part ref="ID_4" plmId="prd-12535825-00000052" name="ECAR-EI_HSH" maturityDate="2026-06-23" wrapperOf="ID_5"></ext:Part>
-      <ext:Part ref="ID_6" plmId="prd-12535825-00000053" name="ECAR-EI_ MACHINE COOLING" maturityDate="2026-07-22" wrapperOf="ID_7"></ext:Part>
-      <ext:Part ref="ID_9" plmId="prd-12535825-00000084" name="ECAR-EI_STATOR Core Tooth" maturityDate="2025-01-20" wrapperOf="ID_10"></ext:Part>
-      <ext:Part ref="ID_11" plmId="prd-12535825-00000085" name="ECAR-EI_STATOR Coil" maturityDate="2025-09-30" wrapperOf="ID_12"></ext:Part>
-      <ext:Part ref="ID_13" plmId="prd-12535825-00000086" name="ECAR-EI_STATOR Core" maturityDate="2026-06-12" wrapperOf="ID_14"></ext:Part>
-      <ext:Part ref="ID_15" plmId="prd-12535825-00000087" name="ECAR-EI_STATOR Coils" maturityDate="2026-09-08" wrapperOf="ID_16"></ext:Part>
-      <ext:Part ref="ID_19" plmId="prd-12535825-00000088" name="ECAR-EI_DIFFERENTIAL_CASTING" maturityDate="2026-02-17" wrapperOf="ID_20"></ext:Part>
-      <ext:Part ref="ID_21" plmId="prd-12535825-00000089" name="ECAR-EI_PIN" maturityDate="2025-12-09" wrapperOf="ID_22"></ext:Part>
-      <ext:Part ref="ID_23" plmId="prd-12535825-00000090" name="ECAR-EI_ DIFFERENTIAL BEVEL GEAR TM BEVEL" maturityDate="2025-12-09" wrapperOf="ID_24"></ext:Part>
-      <ext:Part ref="ID_25" plmId="prd-12535825-00000091" name="ECAR-EI_DIFFERENTIAL SIDE SHAFT LEFT" maturityDate="2025-12-09" wrapperOf="ID_26"></ext:Part>
-      <ext:Part ref="ID_27" plmId="prd-12535825-00000092" name="ECAR-EI_DIFFERENTIAL SIDE SHAFT RIGHT" maturityDate="2025-12-09" wrapperOf="ID_26"></ext:Part>
-      <ext:Part ref="ID_28" plmId="prd-12535825-00000093" name="ECAR-EI_DIFFERENTIAL BEVEL GEAR TM BEVEL" maturityDate="2025-12-09" wrapperOf="ID_24"></ext:Part>
-      <ext:Part ref="ID_29" plmId="prd-12535825-00000056" name="ECAR-EI_01_HSH_BEA1" maturityDate="2025-11-05" wrapperOf="ID_30"></ext:Part>
-      <ext:Part ref="ID_31" plmId="prd-12535825-00000057" name="ECAR-EI_01_HSH_BEA2" maturityDate="2025-11-05" wrapperOf="ID_32"></ext:Part>
-      <ext:Part ref="ID_33" plmId="prd-12535825-00000058" name="ECAR-EI_01_LSH_BEA1" maturityDate="2025-11-05" wrapperOf="ID_34"></ext:Part>
-      <ext:Part ref="ID_35" plmId="prd-12535825-00000059" name="ECAR-EI_01_LSH_BEA2" maturityDate="2025-11-05" wrapperOf="ID_36"></ext:Part>
-      <ext:Part ref="ID_37" plmId="prd-12535825-00000060" name="ECAR-EI_01_ISH_BEA1" maturityDate="2025-11-05" wrapperOf="ID_38"></ext:Part>
-      <ext:Part ref="ID_39" plmId="prd-12535825-00000061" name="ECAR-EI_01_ISH_BEA2" maturityDate="2025-11-05" wrapperOf="ID_40"></ext:Part>
-      <ext:Part ref="ID_41" plmId="prd-12535825-00000062" name="ECAR-EI_GEAR_WHEEL" maturityDate="2026-01-27" wrapperOf="ID_42"></ext:Part>
-      <ext:Part ref="ID_43" plmId="prd-12535825-00000063" name="ECAR-EI_GEAR_WHEEL" maturityDate="2026-05-26" wrapperOf="ID_44"></ext:Part>
-      <ext:Part ref="ID_45" plmId="prd-12535825-00000064" name="ECAR-EI_GEAR_WHEEL" maturityDate="2025-12-16" wrapperOf="ID_46"></ext:Part>
-      <ext:Part ref="ID_47" plmId="prd-12535825-00000065" name="ECAR-EI_GEAR_WHEEL" maturityDate="2026-09-22" wrapperOf="ID_48"></ext:Part>
-      <ext:Part ref="ID_49" plmId="prd-12535825-00000066" name="ECAR-EI_ISH" maturityDate="2026-06-02" wrapperOf="ID_50"></ext:Part>
-      <ext:Part ref="ID_52" plmId="prd-12535825-00000067" name="ECAR-EI_SPY joint" maturityDate="2026-03-24" wrapperOf="ID_53"></ext:Part>
-      <ext:Part ref="ID_54" plmId="prd-12535825-00000068" name="ECAR-EI_left housing" maturityDate="2026-06-30" wrapperOf="ID_55"></ext:Part>
-      <ext:Part ref="ID_56" plmId="prd-12535825-00000069" name="ECAR-EI_right housing" maturityDate="2026-08-25" wrapperOf="ID_57"></ext:Part>
-      <ext:Part ref="ID_58" plmId="prd-12535825-00000070" name="ECAR-EI_bearing housing" maturityDate="2026-03-03" wrapperOf="ID_59"></ext:Part>
-      <ext:Part ref="ID_60" plmId="prd-12535825-00000071" name="ECAR-EI_motor" maturityDate="2026-09-01" wrapperOf="ID_61"></ext:Part>
-      <ext:Part ref="ID_62" plmId="prd-12535825-00000072" name="ECAR-EI_plate bearing motor" maturityDate="2026-06-30" wrapperOf="ID_63"></ext:Part>
-      <ext:Part ref="ID_64" plmId="prd-12535825-00000073" name="ECAR-EI_Transmission support" maturityDate="2026-04-07" wrapperOf="ID_65"></ext:Part>
-      <ext:Part ref="ID_66" plmId="prd-12535825-00000074" name="ECAR-EI_90 degrees pipe" maturityDate="2026-01-20" wrapperOf="ID_67"></ext:Part>
-      <ext:Part ref="ID_68" plmId="prd-12535825-00000075" name="ECAR-EI_Screw D10 L115" maturityDate="2025-10-14" wrapperOf="ID_69"></ext:Part>
-      <ext:Part ref="ID_70" plmId="prd-12535825-00000076" name="ECAR-EI_Screw D8 L50" maturityDate="2026-08-04" wrapperOf="ID_71"></ext:Part>
-      <ext:Part ref="ID_72" plmId="prd-12535825-00000077" name="ECAR-EI_MOTOR SCREW 1" maturityDate="2025-10-14" wrapperOf="ID_73"></ext:Part>
-      <ext:Part ref="ID_75" plmId="prd-12535825-00000079" name="ECAR-EI_MOTOR SCREW" maturityDate="2026-09-29" wrapperOf="ID_76"></ext:Part>
-      <ext:Part ref="ID_77" plmId="prd-12535825-00000080" name="ECAR-EI_Screw D10 L155" maturityDate="2025-10-14" wrapperOf="ID_78"></ext:Part>
+      <ext:Part ref="ID_2" maturityDate="2026-07-07"></ext:Part>
+      <ext:Part ref="ID_4" maturityDate="2026-06-23"></ext:Part>
+      <ext:Part ref="ID_6" maturityDate="2026-07-22"></ext:Part>
+      <ext:Part ref="ID_9" maturityDate="2025-01-20"></ext:Part>
+      <ext:Part ref="ID_11" maturityDate="2025-09-30"></ext:Part>
+      <ext:Part ref="ID_13" maturityDate="2026-06-12"></ext:Part>
+      <ext:Part ref="ID_15" maturityDate="2026-09-08"></ext:Part>
+      <ext:Part ref="ID_19" maturityDate="2026-02-17"></ext:Part>
+      <ext:Part ref="ID_21" maturityDate="2025-12-09"></ext:Part>
+      <ext:Part ref="ID_23" maturityDate="2025-12-09"></ext:Part>
+      <ext:Part ref="ID_25" maturityDate="2025-12-09"></ext:Part>
+      <ext:Part ref="ID_27" maturityDate="2025-12-09"></ext:Part>
+      <ext:Part ref="ID_28" maturityDate="2025-12-09"></ext:Part>
+      <ext:Part ref="ID_29" maturityDate="2025-11-05"></ext:Part>
+      <ext:Part ref="ID_31" maturityDate="2025-11-05"></ext:Part>
+      <ext:Part ref="ID_33" maturityDate="2025-11-05"></ext:Part>
+      <ext:Part ref="ID_35" maturityDate="2025-11-05"></ext:Part>
+      <ext:Part ref="ID_37" maturityDate="2025-11-05"></ext:Part>
+      <ext:Part ref="ID_39" maturityDate="2025-11-05"></ext:Part>
+      <ext:Part ref="ID_41" maturityDate="2026-01-27"></ext:Part>
+      <ext:Part ref="ID_43" maturityDate="2026-05-26"></ext:Part>
+      <ext:Part ref="ID_45" maturityDate="2025-12-16"></ext:Part>
+      <ext:Part ref="ID_47" maturityDate="2026-09-22"></ext:Part>
+      <ext:Part ref="ID_49" maturityDate="2026-06-02"></ext:Part>
+      <ext:Part ref="ID_52" maturityDate="2026-03-24"></ext:Part>
+      <ext:Part ref="ID_54" maturityDate="2026-06-30"></ext:Part>
+      <ext:Part ref="ID_56" maturityDate="2026-08-25"></ext:Part>
+      <ext:Part ref="ID_58" maturityDate="2026-03-03"></ext:Part>
+      <ext:Part ref="ID_60" maturityDate="2026-09-01"></ext:Part>
+      <ext:Part ref="ID_62" maturityDate="2026-06-30"></ext:Part>
+      <ext:Part ref="ID_64" maturityDate="2026-04-07"></ext:Part>
+      <ext:Part ref="ID_66" maturityDate="2026-01-20"></ext:Part>
+      <ext:Part ref="ID_68" maturityDate="2025-10-14"></ext:Part>
+      <ext:Part ref="ID_70" maturityDate="2026-08-04"></ext:Part>
+      <ext:Part ref="ID_72" maturityDate="2025-10-14"></ext:Part>
+      <ext:Part ref="ID_75" maturityDate="2026-09-29"></ext:Part>
+      <ext:Part ref="ID_77" maturityDate="2025-10-14"></ext:Part>
     </ext:PartData>
     <ext:InterfaceTypes>
       <ext:InterfaceType id="mesh" label="Engrènement" test="Essai NVH et endurance au banc" weeks="10" costEur="85000"></ext:InterfaceType>
@@ -4824,20 +4822,5 @@
       <ext:Interface first="ID_53" second="ID_5" type="sealing" note="Lèvre du joint sur l'arbre rapide"></ext:Interface>
       <ext:Interface first="ID_53" second="ID_57" type="sealing" note="Joint logé dans le demi-carter droit"></ext:Interface>
     </ext:Interfaces>
-    <ext:Scenarios>
-      <ext:Scenario id="S1-VOLTARON" kind="SUPPLY_DISRUPTION" part="ID_14" supplier="SUP-01" durationWeeks="16" title="Incendie de la presse d'emboutissage chez Voltaron" narrative="Un incendie détruit la matrice progressive à Siegen. Il faut 16 semaines pour reprendre la production du paquet de tôles, seul fournisseur qualifié. Slovlam est encore en PPAP."></ext:Scenario>
-      <ext:Scenario id="S1-NANIWA" kind="SUPPLY_DISRUPTION" part="ID_3" supplier="SUP-17" durationWeeks="8" title="Arrêt de l'atelier de billes céramique chez Naniwa" narrative="L'atelier d'Osaka s'arrête 8 semaines. Le roulement arrière n'a pas d'alternative, mais 6 semaines de transit maritime et 3 semaines de stock retardent l'effet : le trou d'approvisionnement arrive tard, et le fret aérien peut le combler."></ext:Scenario>
-      <ext:Scenario id="S1-BALKAN" kind="SUPPLY_DISRUPTION" part="ID_16" supplier="SUP-05" durationWeeks="12" title="Perte de la ligne d'émaillage chez Balkan Enamel" narrative="Le second fournisseur du bobinage (30 % du volume) s'arrête 12 semaines. Ce scénario montre l'effet protecteur de la double source : Cuprotherm absorbe une grande partie du volume."></ext:Scenario>
-      <ext:Scenario id="S1-GARDA" kind="SUPPLY_DISRUPTION" part="ID_61" supplier="SUP-07" durationWeeks="6" title="Inondation de la fonderie Garda à Brescia" narrative="Une inondation arrête la coulée basse pression 6 semaines. Le carter moteur est mono-source et aucune alternative n'est référencée."></ext:Scenario>
-      <ext:Scenario id="S2-CU-UP" kind="MATERIAL_PRICE" family="Cuivre" pct="15" title="Cuivre : nouvelle hausse de 15 %" narrative="Le cuivre LME cote déjà 14 415 $/t le 23/10/2026, près de son record de 14 850 $/t d'août 2026. Une hausse de 15 % le porterait vers 16 600 $/t."></ext:Scenario>
-      <ext:Scenario id="S2-CU-DOWN" kind="MATERIAL_PRICE" family="Cuivre" pct="-25" title="Cuivre : retour vers 11 000 $/t" narrative="Détente du marché : le LME revient vers 11 000 $/t, soit 25 % de moins qu'en octobre 2026. Ce scénario mesure le gain potentiel et l'intérêt des contrats indexés."></ext:Scenario>
-      <ext:Scenario id="S2-AL-UP" kind="MATERIAL_PRICE" family="Aluminium" pct="25" title="Aluminium : hausse de 25 %" narrative="L'aluminium LME est autour de 3 100 $/t début octobre 2026. Le coût carbone (CBAM) alimente les primes européennes depuis janvier 2026. Une hausse de 25 % toucherait les 6 pièces en aluminium, soit 30 kg."></ext:Scenario>
-      <ext:Scenario id="S2-FE-UP" kind="MATERIAL_PRICE" family="Acier électrique" pct="18" title="Acier électrique : hausse de 18 %" narrative="Tension sur les tôles fines à faibles pertes, en concurrence avec d'autres marchés de moteurs électriques. Hypothèse de travail, sans cotation publique."></ext:Scenario>
-      <ext:Scenario id="S3-GARDA" kind="SUPPLIER_EXIT" supplier="SUP-07" title="Défaillance de Garda Pressofusioni" narrative="Garda, notation financière C, concentre les carters. Que se passe-t-il si ce fournisseur disparaît avant le démarrage série ?"></ext:Scenario>
-      <ext:Scenario id="S3-DECCAN" kind="SUPPLIER_SWITCH" part="ID_48" toSupplier="SUP-13" sharePct="100" title="Délocaliser la couronne vers Deccan (Inde)" narrative="Les achats proposent de passer la couronne de Schwaben à Deccan pour gagner 16 % sur le prix. Le gain couvre-t-il le coût de qualification, le stock et le risque ?"></ext:Scenario>
-      <ext:Scenario id="S3-SLOVLAM" kind="SUPPLIER_SWITCH" part="ID_14" toSupplier="SUP-02" sharePct="30" title="Sécuriser le paquet de tôles avec Slovlam (30 %)" narrative="Activer une double source sur la pièce la plus lourde et la plus critique, avec 30 % du volume confié à Slovlam."></ext:Scenario>
-      <ext:Scenario id="S4-RELEASE" kind="RELEASE" target="RELEASED" title="Release du produit au jalon du 1er mars 2027" narrative="L'OEM demande une nomenclature entièrement RELEASED au 1er mars 2027 pour tenir le démarrage série de septembre 2027."></ext:Scenario>
-      <ext:Scenario id="S5-95KG" kind="MASS" perimeter="ID_0" targetKg="95.0" title="Atteindre 95 kg sur l'e-drive" narrative="L'OEM vise 95 kg contre 100,1 kg aujourd'hui, soit 5,1 kg à gagner sans compromettre le démarrage série."></ext:Scenario>
-    </ext:Scenarios>
   </ext:Enrichment>
 </XPDMXML>

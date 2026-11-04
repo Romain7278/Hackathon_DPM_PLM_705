@@ -4,29 +4,19 @@ from html import escape
 import streamlit as st
 
 from plm import assistant
+from plm import local_llm
+from plm.chat_queries import SUGGESTIONS
 from ui import theme
 from ui.state import MAIN_EXPLORER, open_part
-
-SUGGESTIONS = [
-    "Quels sont les composants critiques ?",
-    "Rupture du paquet de tôles pendant 16 semaines",
-    "Impact d'une hausse de 20 % du cuivre",
-    "Que se passe-t-il si Garda disparaît ?",
-    "Peut-on faire la release du produit ?",
-    "Comment gagner 5 kg sur l'e-drive ?",
-]
-
 
 def no_math(text):
     """Streamlit lirait les $ comme une formule mathématique."""
     return text.replace("$", "\\$")
 
 
-def api_key():
-    try:
-        return assistant.credential(st.secrets)
-    except Exception:
-        return assistant.credential()
+@st.cache_data(ttl=10, show_spinner=False)
+def local_status():
+    return local_llm.status()
 
 
 def screen_context(model):
@@ -66,13 +56,19 @@ def set_open(value):
 
 def render_panel(model):
     messages = st.session_state.setdefault("chat_messages", [])
-    key = api_key()
     with st.container(key="chat_panel"):
         title, close = st.columns([5, 1], vertical_alignment="center")
         with title:
             theme.html('<div style="font-size:1.05rem;font-weight:700">Assistant PLM</div>')
         close.button("", icon=":material/close:", key="chat_close", type="tertiary", on_click=set_open, args=(False,), help="Fermer l'assistant")
-        st.caption(f"Claude ({assistant.MODEL_ID}), réponses appuyées sur les données PLM." if key else "Mode local : réponses guidées, sans IA. Ajoutez une clé API pour le langage naturel complet.")
+        use_ollama = st.toggle("Utiliser Ollama", key="chat_use_ollama", persist_state="session",
+                               help="Désactivé : assistant intégré historique, sans installation. Activé : modèle local Ollama, avec secours automatique.")
+        if not use_ollama:
+            st.caption("Assistant intégré · réponses guidées et calculs PLM, sans installation ni serveur.")
+        elif local_status():
+            st.caption(f"IA locale · {local_llm.MODEL} · historique et outils de calcul PLM.")
+        else:
+            st.caption("Ollama indisponible · l’assistant intégré reste opérationnel.")
 
         history = st.container(height=500, border=False, key="chat_history", autoscroll=True)
         with history:
@@ -98,7 +94,7 @@ def render_panel(model):
                 st.markdown(no_math(question))
             with st.chat_message("assistant"):
                 with st.status("Interrogation des données PLM…") as status:
-                    answer = assistant.ask(model, question, conversation, screen_context(model), key, on_tool=lambda label: status.update(label=f"{label}…"))
+                    answer = assistant.ask(model, question, conversation, screen_context(model), backend="ollama" if use_ollama else "integrated", on_tool=lambda label: status.update(label=f"{label}…"))
         messages.append({"role": "assistant", "content": answer["text"], "sources": answer["sources"], "mode": answer["mode"]})
         st.rerun(scope="fragment")
 

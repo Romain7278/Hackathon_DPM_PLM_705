@@ -1,21 +1,14 @@
-"""Chatbot global. Avec une clé API : Claude et ses outils. Sans clé ou en cas d'échec : mode local guidé.
+"""Assistant intégré sans dépendance externe, avec modèle Ollama facultatif.
 
-Dans les deux modes, les sources affichées viennent des outils réellement appelés, pas du texte généré.
+Les sources affichées viennent des outils de calcul PLM réellement exécutés.
 """
-import json
-import os
 import re
 
-import anthropic
-from anthropic import beta_tool
-
-from plm import tools
+from plm import tools, local_llm
 from plm.fmt import compact_eur, eur, kg, number, pct, signed_compact_eur, signed_eur
 from plm.model import normalize
 from plm.tools import ToolError
-
-MODEL_ID = "claude-opus-5-5"
-MAX_HISTORY_MESSAGES = 12
+from plm.chat_queries import SUGGESTIONS, answer_known
 
 SYSTEM_PROMPT = """Tu es l'assistant PLM d'un équipementier qui fournit un e-drive avant de 410 kW à un constructeur automobile (OEM). L'équipementier n'a pas accès au PLM de l'OEM : il travaille à partir d'un export XML.
 
@@ -29,198 +22,12 @@ Règles :
 Style : réponds en français, en commençant par la conclusion ou la décision à prendre, puis 2 à 5 puces courtes avec les chiffres clés. Pas plus de 150 mots, sauf si on te demande le détail. Montants en euros."""
 
 
-def credential(secrets=None):
-    """Clé lue dans l'environnement, puis dans .streamlit/secrets.toml. Elle n'est jamais affichée."""
-    key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
-    if key:
-        return key
-    try:
-        return secrets.get("ANTHROPIC_API_KEY") if secrets else None
-    except Exception:
-        return None
-
-
 def dedupe_sources(sources):
     merged = {}
     for source in sources:
         entry = merged.setdefault((source["type"], source["id"]), {**source, "fields": set()})
         entry["fields"].update(f.strip() for f in source.get("fields", "").split(",") if f.strip())
     return [{**entry, "fields": ", ".join(sorted(entry["fields"]))} for entry in merged.values()]
-
-
-def build_claude_tools(model, recorder, on_tool):
-    """Outils exposés à Claude. Chacun enregistre ses sources et renvoie du JSON."""
-
-    def run(label, function, **kwargs):
-        if on_tool:
-            on_tool(label)
-        try:
-            result = function(model, **kwargs)
-        except ToolError as error:
-            return json.dumps({"error": str(error)}, ensure_ascii=False)
-        recorder.extend(result.get("sources", []))
-        payload = {k: v for k, v in result.items() if k != "sources"}
-        return json.dumps(payload, ensure_ascii=False, default=str)
-
-    @beta_tool
-    def rechercher_pieces(requete: str, famille: str | None = None, maturite: str | None = None) -> str:
-        """Cherche des pièces ou assemblages par nom, matériau, description ou ID PLM.
-
-        Args:
-            requete: Texte à chercher. Peut être vide si un filtre est donné.
-            famille: Filtre famille de matériau, parmi Acier, Aluminium, Acier électrique, Cuivre, Fonte, Polymère.
-            maturite: Filtre maturité, parmi PRIVATE, IN_WORK, FROZEN, RELEASED, OBSOLETE.
-        """
-        return run("Recherche de pièces", tools.search_parts, query=requete, family=famille, maturity=maturite)
-
-    @beta_tool
-    def fiche_piece(piece: str) -> str:
-        """Fiche complète d'une pièce ou d'un assemblage : traçabilité, maturité, historique, coût, fournisseurs, interfaces, alertes.
-
-        Args:
-            piece: Nom, terme métier (couronne, carter moteur, paquet de tôles...), ID PLM ou ID XML.
-        """
-        return run("Lecture d'une fiche", tools.part_details, part=piece)
-
-    @beta_tool
-    def structure_produit(assemblage: str | None = None) -> str:
-        """Contenu direct d'un assemblage, masse, coût et nombre de pièces. Sans argument : le produit complet.
-
-        Args:
-            assemblage: Nom de l'assemblage (moteur, stator, réducteur, différentiel, carters).
-        """
-        return run("Lecture de la structure", tools.product_structure, assembly=assemblage)
-
-    @beta_tool
-    def alertes_donnees(severite: str | None = None, domaine: str | None = None, piece: str | None = None) -> str:
-        """Alertes de qualité des données : données manquantes, incohérences de maturité, risques d'approvisionnement.
-
-        Args:
-            severite: Bloquant, Attention ou Info.
-            domaine: Données manquantes, Cohérence parent-enfant, Incohérence, Approvisionnement, Structure ou Nommage.
-            piece: Limite aux alertes de cette pièce ou de cet assemblage et de ses enfants.
-        """
-        return run("Contrôle des données", tools.data_alerts, severity=severite, domain=domaine, part=piece)
-
-    @beta_tool
-    def composants_critiques(nombre: int = 10) -> str:
-        """Classement des composants critiques avec le score et les raisons.
-
-        Args:
-            nombre: Nombre de composants à renvoyer.
-        """
-        return run("Calcul de la criticité", tools.critical_parts, top=nombre)
-
-    @beta_tool
-    def simuler_rupture(piece: str, semaines: int = 8, fournisseur: str | None = None) -> str:
-        """Scénario 1 : rupture d'approvisionnement d'une pièce. Compare attente, réallocation et plan d'urgence.
-
-        Args:
-            piece: Pièce touchée.
-            semaines: Durée de l'arrêt du fournisseur en semaines.
-            fournisseur: Fournisseur à l'arrêt. Par défaut le fournisseur principal.
-        """
-        return run("Calcul de la rupture", tools.supply_disruption, part=piece, supplier=fournisseur, weeks=semaines)
-
-    @beta_tool
-    def simuler_prix_matiere(matiere: str, variation_pct: float) -> str:
-        """Scénario 2 : effet d'une variation de l'indice d'une matière sur les pièces, le coût et la marge.
-
-        Args:
-            matiere: Famille (cuivre, aluminium, acier électrique, acier, fonte, polymère) ou nom exact du matériau.
-            variation_pct: Variation de l'indice en pourcentage, négative pour une baisse.
-        """
-        return run("Calcul du prix matière", tools.material_price, material=matiere, pct=variation_pct)
-
-    @beta_tool
-    def cartographie_fournisseurs(fournisseur: str | None = None) -> str:
-        """Scénario 3 : carte des fournisseurs, origines, pièces mono-source. Avec un fournisseur : ses pièces et ses indicateurs.
-
-        Args:
-            fournisseur: Nom ou ID du fournisseur à détailler.
-        """
-        return run("Cartographie fournisseurs", tools.supplier_mapping, supplier=fournisseur)
-
-    @beta_tool
-    def simuler_defaillance_fournisseur(fournisseur: str) -> str:
-        """Scénario 3 : conséquences de la disparition d'un fournisseur sur toutes ses pièces.
-
-        Args:
-            fournisseur: Nom ou ID du fournisseur.
-        """
-        return run("Calcul de la défaillance", tools.supplier_exit, supplier=fournisseur)
-
-    @beta_tool
-    def simuler_changement_fournisseur(piece: str, fournisseur: str, part_pct: int = 100) -> str:
-        """Scénario 3 : changer le fournisseur d'une pièce (100 %) ou ajouter une seconde source (moins de 100 %).
-
-        Args:
-            piece: Pièce concernée.
-            fournisseur: Nouveau fournisseur, déjà référencé sur cette pièce.
-            part_pct: Part du volume confiée au nouveau fournisseur.
-        """
-        return run("Calcul du changement", tools.supplier_switch, part=piece, supplier=fournisseur, share_pct=part_pct)
-
-    @beta_tool
-    def verifier_release(maturite_cible: str = "RELEASED") -> str:
-        """Scénario 4 : quelles pièces ont la maturité suffisante pour libérer le produit, blocages et date au plus tôt.
-
-        Args:
-            maturite_cible: FROZEN ou RELEASED.
-        """
-        return run("Contrôle de release", tools.release_check, target=maturite_cible)
-
-    @beta_tool
-    def optimiser_masse(gain_kg: float | None = None, perimetre: str | None = None, faisabilite_faible: bool = False) -> str:
-        """Scénario 5 : pièces les plus lourdes et plan d'allègement au meilleur coût.
-
-        Args:
-            gain_kg: Gain de masse visé en kg. Par défaut l'écart à la cible de 95 kg.
-            perimetre: Assemblage étudié (moteur, réducteur, carters). Par défaut le produit complet.
-            faisabilite_faible: Autoriser les options de faible faisabilité.
-        """
-        return run("Optimisation de masse", tools.mass_optimization, target_saving_kg=gain_kg, perimeter=perimetre, allow_low_feasibility=faisabilite_faible)
-
-    @beta_tool
-    def indicateurs_produit() -> str:
-        """Indicateurs globaux : masse, nombre de pièces, coût, fournisseurs, alertes, maturité, encombrement."""
-        return run("Lecture des indicateurs", tools.indicators)
-
-    return [rechercher_pieces, fiche_piece, structure_produit, alertes_donnees, composants_critiques, simuler_rupture, simuler_prix_matiere,
-            cartographie_fournisseurs, simuler_defaillance_fournisseur, simuler_changement_fournisseur, verifier_release, optimiser_masse, indicateurs_produit]
-
-
-def ask_claude(model, question, history, screen_context, api_key, on_tool=None, base_url=None):
-    client = anthropic.Anthropic(api_key=api_key, base_url=base_url)
-    recorder = []
-    runner = client.beta.messages.tool_runner(
-        model=MODEL_ID,
-        max_tokens=16000,
-        system=[
-            {"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}},
-            {"type": "text", "text": screen_context},
-        ],
-        tools=build_claude_tools(model, recorder, on_tool),
-        messages=[*history[-MAX_HISTORY_MESSAGES:], {"role": "user", "content": question}],
-        output_config={"effort": "medium"},
-        max_iterations=8,
-        betas=["server-side-fallback-2026-07-01"],
-        extra_body={"fallbacks": "default"},
-    )
-    final = None
-    for message in runner:
-        final = message
-    text = "\n".join(block.text for block in final.content if block.type == "text").strip()
-    if final.stop_reason == "refusal":
-        text = "La demande a été refusée par les filtres du modèle. Reformulez-la autour des données du produit."
-    elif final.stop_reason == "max_tokens":
-        text += "\n\n(Réponse tronquée : demandez la suite ou une réponse plus courte.)"
-    elif not text:
-        text = "Je n'ai pas pu conclure avec les données disponibles. Reformulez ou précisez la pièce visée."
-    return {"text": text, "sources": dedupe_sources(recorder), "mode": "claude"}
-
-
-# ---------------------------------------------------------------- Mode local
 
 
 def bullets(lines):
@@ -368,7 +175,7 @@ def local_alerts(model, question):
 
 
 def local_part(model, question):
-    nodes = model.find_part(question)
+    nodes = model.find_part(question, fuzzy=False)
     if not nodes:
         return None
     if len({n.part_id for n in nodes}) > 1:
@@ -416,6 +223,9 @@ LOCAL_INTENTS = [
 def ask_local(model, question):
     query = normalize(question)
     try:
+        known = answer_known(model, question)
+        if known:
+            return {**known, 'sources': dedupe_sources(known['sources']), 'mode': 'local'}
         for pattern, handler in LOCAL_INTENTS:
             if re.search(pattern, query):
                 text, sources = handler(model, question)
@@ -426,33 +236,21 @@ def ask_local(model, question):
     if answer:
         return {"text": answer[0], "sources": dedupe_sources(answer[1]), "mode": "local"}
     return {
-        "text": "Je n'ai pas identifié la demande. Essayez par exemple :\n" + bullets([
-            "Quels sont les composants critiques ?",
-            "Rupture du paquet de tôles pendant 16 semaines",
-            "Impact d'une hausse de 20 % du cuivre",
-            "Que se passe-t-il si Garda disparaît ?",
-            "Peut-on faire la release du produit ?",
-            "Comment gagner 5 kg ?",
-        ]),
+        "text": "Je n'ai pas identifié la demande. Essayez par exemple :\n" + bullets(SUGGESTIONS),
         "sources": [],
         "mode": "local",
     }
 
 
-def ask(model, question, history, screen_context, api_key=None, on_tool=None):
-    """Répond avec Claude si une clé est disponible, sinon en mode local. Une erreur d'API bascule en mode local."""
-    if not api_key:
+def ask(model, question, history, screen_context, on_tool=None, backend="integrated"):
+    """L'assistant intégré fonctionne sans serveur ; Ollama est un choix explicite."""
+    if backend != "ollama":
         return ask_local(model, question)
     try:
-        return ask_claude(model, question, history, screen_context, api_key, on_tool)
-    except anthropic.AuthenticationError:
-        note = "Clé API refusée"
-    except anthropic.RateLimitError:
-        note = "Limite de requêtes atteinte"
-    except anthropic.APIConnectionError:
-        note = "Connexion à l'API impossible"
-    except anthropic.APIStatusError as error:
-        note = f"Erreur de l'API ({error.status_code})"
-    answer = ask_local(model, question)
-    answer["text"] = f"*{note} : réponse du mode local.*\n\n{answer['text']}"
-    return answer
+        answer = local_llm.ask(model, question, history, screen_context, SYSTEM_PROMPT, on_tool)
+        answer["sources"] = dedupe_sources(answer["sources"])
+        return answer
+    except local_llm.LocalModelError as error:
+        answer = ask_local(model, question)
+        answer["text"] = f"*{error}. Réponse de l'assistant intégré en secours.*\n\n{answer['text']}"
+        return answer

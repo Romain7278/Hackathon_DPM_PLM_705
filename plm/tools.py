@@ -1,18 +1,29 @@
-"""Outils d'interrogation des données, partagés par le chatbot Claude et le mode local.
+"""Outils d'interrogation des données, partagés par le modèle Ollama et l’assistant intégré.
 
 Chaque outil renvoie un dictionnaire compact avec une clé "sources" : les éléments PLM réellement lus.
 C'est cette liste, et non le texte du modèle, qui alimente l'affichage des sources dans le chat.
 """
+import re
 from plm import scenarios
-from plm.model import MATURITY_RANK, QUALIFICATION_LABELS, normalize
-
-
-class ToolError(Exception):
-    """Demande impossible à résoudre (pièce inconnue, nom ambigu) : le message est renvoyé tel quel."""
+from plm.annotations import maturity_note, revision_history, supplier_note
+from plm.model import QUALIFICATION_LABELS, normalize
+from plm.tool_inputs import ToolError, key, enum, enum_filter, numeric, boolean, MATURITIES, FAMILIES, SEVERITIES, DOMAINS
 
 
 def resolve_node(model, text):
-    nodes = model.find_part(text)
+    if not isinstance(text, str) or not text.strip():
+        raise ToolError('Une pièce ou un assemblage doit être précisé.')
+    explicit = re.findall(r'\b(?:id[ _-]*\d+|prd-[\w-]+)\b', text, re.I)
+    if explicit:
+        nodes = []
+        for token in explicit:
+            identifier = re.sub(r'^id[ _-]*0*(\d+)$', r'ID_\1', token, flags=re.I)
+            candidates = [n for n in model.nodes.values() if n.id.lower() == identifier.lower() or n.part_id.lower() == identifier.lower() or n.product['plm_id'].lower() == identifier.lower()]
+            if not candidates:
+                raise ToolError(f'Identifiant de pièce inconnu : {token}.')
+            nodes.extend(candidates)
+    else:
+        nodes = model.find_part(text.strip(), fuzzy=False)
     if not nodes:
         raise ToolError(f"Aucune pièce trouvée pour « {text} ».")
     if len(nodes) > 1 and len({n.part_id for n in nodes}) > 1:
@@ -22,34 +33,60 @@ def resolve_node(model, text):
 
 
 def resolve_supplier(model, text):
-    supplier = model.find_supplier(text)
-    if supplier is None:
+    if not isinstance(text, str) or not text.strip():
+        raise ToolError('Un fournisseur doit être précisé.')
+    ids = re.findall(r'\bsup[ _-]*0*(\d+)\b', text, re.I)
+    if ids:
+        candidates = [model.suppliers.get(f'SUP-{int(value):02d}') for value in ids]
+        if any(s is None for s in candidates):
+            raise ToolError('Identifiant fournisseur inconnu.')
+    else:
+        query = key(text)
+        candidates = [s for s in model.suppliers.values() if key(s['name']) == query or re.search(r'\b' + re.escape(key(s['name']).split()[0]) + r'\b', query)]
+    candidates = {s['id']: s for s in candidates}
+    if len(candidates) > 1:
+        raise ToolError('Plusieurs fournisseurs correspondent : ' + ', '.join(candidates) + '. Précisez un seul fournisseur.')
+    if not candidates:
         known = ", ".join(s["name"] for s in model.suppliers.values())
         raise ToolError(f"Fournisseur « {text} » inconnu. Fournisseurs référencés : {known}.")
-    return supplier
+    return next(iter(candidates.values()))
 
 
 def rounded(value, digits=2):
     return round(value, digits) if isinstance(value, float) else value
 
 
-def search_parts(model, query, family=None, maturity=None, limit=12):
-    terms = normalize(query)
+def search_parts(model, query='', family=None, maturity=None, limit=12):
+    limit = numeric(limit, 'Nombre de résultats', 1, 100, True)
+    families = enum_filter(family, FAMILIES, 'Famille de matériau')
+    maturities = enum_filter(maturity, MATURITIES, 'Maturité')
+    if not isinstance(query, str):
+        raise ToolError('La recherche doit être textuelle.')
+    terms = '' if query.strip().lower() in ('tous', 'toutes', '*', 'all') else normalize(query)
+    requested_part = resolve_node(model, query).part_id if re.fullmatch(r'(?:id[ _-]*\d+|prd-[\w-]+)', query.strip(), re.I) else None
+    plurals = {'roulements': 'roulement', 'carters': 'carter', 'arbres': 'arbre', 'engrenages': 'engrenage'}
+    terms = ' '.join(plurals.get(word, word) for word in terms.split())
     matches = []
     for node in model.nodes.values():
-        if node.is_assembly and (family or maturity):
+        if node.is_assembly and (families or maturities):
             continue
         part = node.product
         text = normalize(" ".join(filter(None, [node.label, part["name"], part["description"], part["material"], part.get("material_family"), part["plm_id"], node.id])))
-        if terms and terms not in text:
+        if requested_part and node.part_id != requested_part:
             continue
-        if family and part.get("material_family") != family:
+        if not requested_part and terms and not all(word in text for word in terms.split()):
             continue
-        if maturity and part["maturity"] != maturity:
+        if families and part.get("material_family") not in families:
+            continue
+        if maturities and part["maturity"] not in maturities:
             continue
         matches.append(node)
     if not matches and terms:
         matches = model.find_part(query)
+        # La recherche par alias ne doit jamais contourner les filtres demandés.
+        matches = [n for n in matches if not ((families or maturities) and n.is_assembly)
+                   and (not families or n.product.get('material_family') in families)
+                   and (not maturities or n.product['maturity'] in maturities)]
     rows = [{"id": n.id, "part_id": n.part_id, "name": n.label, "plm_name": n.product["name"], "plm_id": n.product["plm_id"], "quantity": n.abs_quantity,
              "mass_kg": rounded(n.total_mass, 3), "material": n.product["material"], "revision": n.product["revision"], "maturity": n.product["maturity"]} for n in matches[:limit]]
     return {"count": len(matches), "results": rows, "sources": [model.source_ref(n.part_id, "nom, masse, matériau, maturité") for n in matches[:limit]]}
@@ -79,7 +116,8 @@ def part_details(model, part):
         "mass_total_kg": rounded(node.total_mass, 3),
         "cost_total_eur": rounded(model.node_cost(node)),
         "alerts": [{"severity": f["severity"], "message": f["message"]} for f in model.findings_for_node(node)],
-        "history": [{k: r.get(k) for k in ("name", "date", "eco", "reason", "mass_kg")} for r in product["revisions"]],
+        "history": [{k: r.get(k) for k in ("name", "date", "eco", "reason", "mass_kg")} for r in revision_history(product)],
+        "maturity_note": maturity_note(model, product),
     }
     if node.is_assembly:
         result["children"] = [{"name": c.label, "quantity": c.quantity, "mass_kg": rounded(c.total_mass, 3), "maturity": c.product["maturity"]} for c in node.children]
@@ -87,6 +125,7 @@ def part_details(model, part):
         unit_cost, cost_kind = model.unit_cost(product)
         result.update({
             "material": product["material"],
+            "supplier_note": supplier_note(model, product),
             "unit_cost_eur": rounded(unit_cost),
             "cost_kind": cost_kind,
             **({"complexity": model.complexity(product)} if product.get("physical", True) else {}),
@@ -122,34 +161,43 @@ def product_structure(model, assembly=None):
 def data_alerts(model, severity=None, domain=None, part=None, limit=25):
     from plm.quality import counts
 
+    limit = numeric(limit, 'Nombre de résultats', 1, 100, True)
+    severities = enum_filter(severity, SEVERITIES, 'Sévérité')
+    domains = enum_filter(domain, DOMAINS, 'Domaine de contrôle')
     findings = model.findings
     if part:
         findings = model.subtree_findings(resolve_node(model, part))
-    if severity:
-        findings = [f for f in findings if normalize(f["severity"]) == normalize(severity)]
-    if domain:
-        findings = [f for f in findings if normalize(domain) in normalize(f["domain"])]
+    if severities:
+        findings = [f for f in findings if f['severity'] in severities]
+    if domains:
+        findings = [f for f in findings if f['domain'] in domains]
+    severity = ' ou '.join(severities) if severities else None
     return {
+        "severity": severity,
+        "total": len(findings),
+        "affected_components": len({f['product_id'] for f in findings}),
         "totals": counts(findings),
         "shown": len(findings[:limit]),
-        "alerts": [{k: f[k] for k in ("severity", "domain", "name", "message")} for f in findings[:limit]],
+        "alerts": [{**{k: f[k] for k in ("severity", "domain", "name", "message")}, 'plm_id': model.products[f['product_id']]['plm_id']} for f in findings[:limit]],
         "sources": [model.source_ref(f["product_id"], f"contrôle {f['rule']}") for f in findings[:limit]],
     }
 
 
 def critical_parts(model, top=10):
+    top = numeric(top, 'Nombre de composants', 1, 100, True)
     rows = scenarios.criticality(model)
     selected = rows[:top]
     fields = ("name", "plm_id", "score", "level", "level_reason", "reasons", "breakdown", "complexity", "complexity_level", "sources_qualified", "sources_referenced", "origin", "interfaces", "mass_kg", "line_cost", "cost_share", "quantity")
     return {
         "levels": {level: sum(r["level"] == level for r in rows) for level, _ in scenarios.LEVELS},
-        "rule": "Score sur 100 : sources, délai de remplacement, délai, origine, santé financière, classe fonctionnelle, interdépendances, poids dans le coût. Une pièce de classe A ou B avec un seul fournisseur qualifié est critique.",
+        "rule": "Score sur 100 : six critères de même poids (100/6 points chacun) : résilience d’approvisionnement, délai, robustesse fournisseur, criticité intrinsèque, interdépendances, poids dans le coût. Classe A/B avec au plus une source qualifiée : Critique ; classe C : au moins Élevé.",
         "parts": [{k: rounded(r[k]) for k in fields} for r in selected],
         "sources": [model.source_ref(r["part_id"], "sourcing, interfaces, masse, coût") for r in selected],
     }
 
 
 def supply_disruption(model, part, supplier=None, weeks=8):
+    weeks = numeric(weeks, 'Durée', 1, 104, True, ('semaines', 'semaine', 'weeks', 'week', 'sem'))
     node = resolve_node(model, part)
     if node.is_assembly:
         raise ToolError(f"{node.label} est un assemblage : préciser une pièce.")
@@ -163,7 +211,7 @@ def supply_disruption(model, part, supplier=None, weeks=8):
         "supplier": result["supplier"],
         "share_lost_pct": result["share_lost_pct"],
         "duration_weeks": result["duration_weeks"],
-        "hypothesis": "Cadence série de 1 000 e-drives par semaine.",
+        "hypothesis": f"Cadence série de {model.program['weekly_demand']:g} e-drives par semaine.",
         "plant_stock_days": result["plant_stock_days"],
         "transit_days": result["transit_days"],
         "cover_days_before_line_stop": rounded(result["cover_days"]) if result["cover_days"] is not None else None,
@@ -179,8 +227,17 @@ def supply_disruption(model, part, supplier=None, weeks=8):
 
 
 def material_price(model, material, pct):
-    family = model.find_family(material)
-    exact = next((m["plm_name"] for m in model.materials.values() if normalize(material) == normalize(m["plm_name"])), None)
+    pct = numeric(pct, 'Variation de prix', -100, 500, units=('%', 'pour cent', 'percent'))
+    if not isinstance(material, str) or not material.strip():
+        raise ToolError('Une matière doit être précisée.')
+    exact = next((m['plm_name'] for m in model.materials.values() if key(material) in (key(m['plm_name']), key(m['id']))), None)
+    family = FAMILIES.get(key(material)) if not exact else None
+    if not family and not exact:
+        grades = [m['plm_name'] for m in model.materials.values() if len(key(material)) >= 3 and key(material) in key(m['plm_name'])]
+        if len(grades) == 1:
+            exact = grades[0]
+        elif len(grades) > 1:
+            raise ToolError('Plusieurs nuances correspondent : ' + ', '.join(grades) + '.')
     if not family and not exact:
         families = sorted({m["family"] for m in model.materials.values() if m["in_bom"]})
         raise ToolError(f"Matériau « {material} » inconnu. Familles disponibles : {', '.join(families)}.")
@@ -188,7 +245,7 @@ def material_price(model, material, pct):
     keys = ("family", "material", "pct", "parts", "mass_kg", "delta_unit", "delta_annual", "bom_before", "bom_after", "margin_pct_before", "margin_pct_after", "first_12_months", "share_within_3_months")
     return {
         **{k: rounded(result[k], 3) for k in keys},
-        "hypothesis": "Seule la part indexée du prix matière varie, pas la conversion. Volume de 48 000 e-drives par an.",
+        "hypothesis": f"Seule la part indexée du prix matière varie, pas la conversion. Volume de {model.program['annual_volume']:g} e-drives par an.",
         "rows": [{k: rounded(r[k]) for k in ("part", "plm_id", "material", "quantity", "usage_kg", "price_before", "price_after", "delta_part", "delta_unit", "delta_annual", "first_month", "clauses")} for r in result["rows"]],
         "sources": result["sources"],
     }
@@ -204,13 +261,18 @@ def supplier_mapping(model, supplier=None):
                 "sources": [model.supplier_ref(target["id"], "pays, notation, qualité")] + [model.source_ref(p["xml_id"], "sourcing") for p, _ in model.supplier_parts(target["id"], active_only=False)]}
     concentration = scenarios.concentration(model)
     mapping = scenarios.part_supplier_mapping(model)
-    single = [{"part": r["part"], "suppliers": r["suppliers"], "class": r["class"]} for r in mapping if r["single_source"]]
+    single = [{"part": r["part"], "plm_id": model.products[r['part_id']]['plm_id'], "qualified": r['qualified'], "suppliers": r["suppliers"], "class": r["class"]} for r in mapping if r["single_source"]]
+    suppliers_by_country = {}
+    for supplier in scenarios.supplier_table(model):
+        if supplier['active_parts']:
+            suppliers_by_country[supplier['country']] = suppliers_by_country.get(supplier['country'], 0) + 1
     return {
         **{k: rounded(concentration[k], 3) for k in ("suppliers_active", "suppliers_referenced", "countries", "top3_share", "non_eu_share", "single_source_parts", "single_source_spend", "total_spend")},
         "spend_by_country": [{"country": c, "annual_eur": round(v)} for c, v in concentration["by_country"]],
         "top_suppliers": [{k: rounded(r[k], 3) for k in ("supplier", "country", "active_parts", "spend_annual", "spend_share", "sole_source_parts", "rating")} for r in scenarios.supplier_table(model)[:6]],
         "single_source_list": single,
-        "sources": [model.source_ref(r["part_id"], "sourcing") for r in mapping if r["single_source"]],
+        "suppliers_by_country": [{'country': country, 'suppliers': count} for country, count in sorted(suppliers_by_country.items())],
+        "sources": [model.source_ref(r["part_id"], "sourcing") for r in mapping if r["single_source"]] + [model.supplier_ref(s['supplier_id'], 'pays') for s in scenarios.supplier_table(model) if s['active_parts']],
     }
 
 
@@ -225,7 +287,10 @@ def supplier_exit(model, supplier):
 
 
 def supplier_switch(model, part, supplier, share_pct=100):
+    share_pct = numeric(share_pct, 'Part de volume', 1, 100, True, ('%', 'pour cent', 'percent'))
     node = resolve_node(model, part)
+    if node.is_assembly:
+        raise ToolError('Le changement de fournisseur concerne une pièce, pas un assemblage.')
     result = scenarios.supplier_switch(model, node.part_id, resolve_supplier(model, supplier)["id"], int(share_pct))
     if "error" in result:
         raise ToolError(result["error"])
@@ -235,8 +300,8 @@ def supplier_switch(model, part, supplier, share_pct=100):
 
 
 def release_check(model, target="RELEASED"):
-    target = target.upper()
-    if target not in MATURITY_RANK:
+    target = enum(target, MATURITIES, 'Maturité cible')
+    if target not in ('FROZEN', 'RELEASED'):
         raise ToolError("Maturité cible attendue : FROZEN ou RELEASED.")
     result = scenarios.release_readiness(model, target)
     pending = [r for r in result["rows"] if not r["ready"]]
@@ -250,10 +315,13 @@ def release_check(model, target="RELEASED"):
 
 
 def mass_optimization(model, target_saving_kg=None, perimeter=None, allow_low_feasibility=False):
+    if target_saving_kg is not None:
+        target_saving_kg = numeric(target_saving_kg, 'Gain de masse', 0, 100, units=('kg', 'kilogrammes', 'kilogramme'))
+    allow_low_feasibility = boolean(allow_low_feasibility, 'Faisabilité faible')
     node = resolve_node(model, perimeter) if perimeter else model.tree
     if not node.is_assembly:
         node = node.parent
-    plan = scenarios.mass_plan(model, node.id, float(target_saving_kg) if target_saving_kg else None, "LOW" if allow_low_feasibility else "MEDIUM")
+    plan = scenarios.mass_plan(model, node.id, target_saving_kg, "LOW" if allow_low_feasibility else "MEDIUM")
     pareto = scenarios.mass_pareto(model, node.id)
     fields = ("part", "plm_id", "label", "kind", "material_after", "delta_mass", "delta_cost", "eur_per_kg", "delta_co2", "one_off", "weeks", "feasibility_label", "space", "risk")
     return {
@@ -272,11 +340,10 @@ def mass_optimization(model, target_saving_kg=None, perimeter=None, allow_low_fe
 
 
 def indicators(model):
+    from plm.quality import counts
     kpis = scenarios.product_kpis(model)
     return {**{k: rounded(v, 3) for k, v in kpis.items()},
+            "alerts": counts(model.findings),
+            "data_control_alerts": kpis['alerts'],
             "program": {k: model.program[k] for k in ("annual_volume", "sop_date", "release_gate_date", "mass_target_kg")},
             "sources": [model.source_ref(model.tree.product, "structure, masse")]}
-
-
-def scenario_catalog(model):
-    return {"scenarios": [{k: s.get(k) for k in ("id", "kind", "title", "narrative")} for s in model.scenarios.values()], "sources": []}

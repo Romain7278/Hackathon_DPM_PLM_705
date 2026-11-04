@@ -141,10 +141,10 @@ class PlmModel:
         enrichment = data["enrichment"]
         self.enrichment = enrichment
         self.program = enrichment["program"]
+        self.program["weekly_demand"] = self.program["annual_volume"] / self.program["production_weeks"]
         self.suppliers = {s["id"]: s for s in enrichment["suppliers"]}
         self.materials = {m["plm_name"]: m for m in enrichment["materials"]}
         self.interface_types = {t["id"]: t for t in enrichment["interface_types"]}
-        self.scenarios = {s["id"]: s for s in enrichment["scenarios"]}
 
         self.tree = self._build_node(data["root"], 1, None)
         self.nodes = {}
@@ -323,7 +323,7 @@ class PlmModel:
         return {"type": "Fournisseur", "id": supplier_id, "plm_id": "", "label": supplier["name"], "fields": fields}
 
     # Recherche
-    def find_part(self, text):
+    def find_part(self, text, fuzzy=True):
         """Retrouve une pièce ou un assemblage par ID, nom ou terme métier. Renvoie une liste de nœuds candidats."""
         raw = str(text).strip()
         if raw in self.nodes:
@@ -349,8 +349,10 @@ class PlmModel:
             for product_id, terms in aliases.items():
                 for term in terms:
                     if re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", query) and len(term) > best_length:
-                        best_length = len(term)
-                        best = [self.nodes[product_id]] if is_assembly else self.nodes_by_part[product_id][:1]
+                        candidates = [self.nodes[product_id]] if is_assembly and product_id in self.nodes else self.nodes_by_part.get(product_id, [])[:1]
+                        if candidates:
+                            best_length = len(term)
+                            best = candidates
         for node in self.nodes.values():
             label = normalize(node.label)
             if len(label) > max(best_length, 3) and label in query:
@@ -358,6 +360,8 @@ class PlmModel:
                 best = [node]
         if best:
             return best
+        if not fuzzy:
+            return []
 
         labels = {normalize(n.label): n for n in self.nodes.values()}
         close = get_close_matches(query, list(labels), n=3, cutoff=0.6)
@@ -418,6 +422,9 @@ class PlmModel:
 def load_model(xml_path=DATA_XML):
     from plm.quality import run_checks
 
-    model = PlmModel(parse_plm(xml_path))
+    data = parse_plm(xml_path)
+    if data["enrichment"] is None:
+        raise ValueError("Ce XML ne contient pas les données d’enrichissement nécessaires aux analyses.")
+    model = PlmModel(data)
     model.findings = run_checks(model)
     return model

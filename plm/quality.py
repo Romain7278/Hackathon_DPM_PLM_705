@@ -36,7 +36,7 @@ PARSER_RULES = {
 
 
 def finding(rule, severity, domain, product, message, element=None, field=None):
-    return {"rule": rule, "severity": severity, "domain": domain, "product_id": product["xml_id"], "name": product["name"], "message": message, "element": element, "field": field}
+    return {"rule": rule, "severity": severity, "domain": domain, "product_id": product["xml_id"], "name": product["name"], "message": message, "element": element, "field": field, "generated": True}
 
 
 def is_control(found):
@@ -139,6 +139,13 @@ def check_lifecycle(model):
 
 def check_missing_data(model):
     found = []
+    # Champs requis : les libellés et messages sont produits par les règles,
+    # jamais par une éventuelle section d'alertes du XML.
+    for product in model.products.values():
+        for key, label in (("name", "Nom"), ("plm_id", "ID PLM"), ("revision", "Révision"),
+                           ("maturity", "Maturité"), ("owner", "Propriétaire"), ("created", "Date de création"), ("modified", "Date de modification")):
+            if not filled(product.get(key)):
+                found.append(finding(f"missing_{key}", WARNING, MISSING, product, f"{label} non renseigné(e).", field=label))
     for part in model.physical_parts:
         if not part["sourcing"]:
             found.append(finding("missing_supplier", BLOCKING, MISSING, part, "Aucun fournisseur désigné.", field="Fournisseur"))
@@ -211,7 +218,9 @@ def check_structure(model):
             found.append(finding("mass_rollup", BLOCKING, INCONSISTENT, node.product,
                                  f"Masse déclarée {node.unit_mass} kg, somme des enfants {computed:.3f} kg."))
 
-    emotor = model.nodes["ID_1"]
+    emotor = next((node for node in model.nodes.values() if node.is_assembly and "emotor" in node.label.lower()), None)
+    if emotor is None:
+        return found
     names = " ".join(n.label.lower() for n in emotor.leaves())
     if not re.search(r"rotor|magnet|aimant", names):
         found.append(finding("structure_gap", WARNING, STRUCTURE, emotor.product,

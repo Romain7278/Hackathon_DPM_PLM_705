@@ -1,4 +1,4 @@
-"""Onglet Analyse d'impacts : réglage de 5 facteurs en haut, effet face à la référence en bas."""
+"""Onglet Analyse d'impacts : six facteurs combinables et comparaison à la référence."""
 from datetime import date
 from html import escape
 
@@ -11,12 +11,17 @@ from plm.model import FAMILIES
 from ui import theme
 from ui.state import open_from_table
 
-CUSTOM = "Paramètres libres"
 ELEMENTS_PRIMARY = "__elements__"
 BEST_ALTERNATIVE = "__best__"
 SCENARIO_COLOR = theme.SERIES[0]
 REFERENCE_COLOR = theme.BASELINE
 HIGHER_IS_BAD, HIGHER_IS_GOOD, NEUTRAL = -1, 1, 0
+CHANGE_KINDS = {"geometry": "Géométrie / dimensions", "material": "Matériau", "process": "Procédé de fabrication"}
+
+
+def reset_change_fields():
+    for key in ('ia_s6_interfaces', 'ia_s6_material'):
+        st.session_state.pop(key, None)
 
 
 def node_id(model, part_id):
@@ -57,42 +62,15 @@ def defaults(model):
         "ia_s3_on": False, "ia_s3_from": ELEMENTS_PRIMARY, "ia_s3_to": BEST_ALTERNATIVE, "ia_s3_share": 100,
         "ia_s4_on": False, "ia_s4_target": "RELEASED", "ia_s4_gate": date.fromisoformat(model.program["release_gate_date"]),
         "ia_s5_on": False, "ia_s5_target": float(model.program["mass_target_kg"]), "ia_s5_options": [],
+        "ia_s6_on": False, "ia_s6_part": model.physical_parts[0]["xml_id"], "ia_s6_mass_pct": 0, "ia_s6_weeks": 8,
+        "ia_s6_kind": "geometry", "ia_s6_complexity_delta": 0,
     }
 
 
-def preset_values(model, preset):
-    """Traduit un scénario du XML enrichi en réglages."""
-    scenario = model.scenarios[preset]
-    kind = scenario["kind"]
-    if kind == "SUPPLY_DISRUPTION":
-        return dict(ia_elements=[node_id(model, scenario["part"])], ia_s1_on=True, ia_s1_supplier=scenario["supplier"], ia_s1_weeks=scenario["duration_weeks"])
-    if kind == "MATERIAL_PRICE":
-        return dict(ia_s2_on=True, ia_s2_material=scenario["family"], ia_s2_pct=scenario["pct"])
-    if kind == "SUPPLIER_EXIT":
-        return dict(ia_s3_on=True, ia_s3_from=scenario["supplier"])
-    if kind == "SUPPLIER_SWITCH":
-        return dict(ia_elements=[node_id(model, scenario["part"])], ia_s3_on=True, ia_s3_to=scenario["to_supplier"], ia_s3_share=scenario["share_pct"])
-    if kind == "RELEASE":
-        return dict(ia_s4_on=True, ia_s4_target=scenario["target"])
-    return dict(ia_s5_on=True, ia_s5_target=float(scenario["target_kg"]))
-
-
-def apply_preset(model):
-    preset = st.session_state.ia_preset
-    if preset == CUSTOM:
-        return
-    for key, value in {**defaults(model), **preset_values(model, preset)}.items():
-        st.session_state[key] = value
-
-
-def mark_custom():
-    st.session_state.ia_preset = CUSTOM
-
-
 def reset_params(model):
+    reset_change_fields()
     for key, value in defaults(model).items():
         st.session_state[key] = value
-    st.session_state.ia_preset = CUSTOM
 
 
 def read_params():
@@ -108,6 +86,11 @@ def read_params():
         params["release"] = {"target": state.ia_s4_target, "gate": state.ia_s4_gate.isoformat()}
     if state.ia_s5_on:
         params["mass"] = {"target_kg": state.ia_s5_target, "options": state.ia_s5_options}
+    if state.ia_s6_on:
+        params["versioning"] = {"part": state.ia_s6_part, "mass_pct": state.ia_s6_mass_pct, "weeks": state.ia_s6_weeks,
+                               "kind": state.ia_s6_kind, "interfaces": state.ia_s6_interfaces,
+                               "material": state.get('ia_s6_material'),
+                               "complexity_delta": state.ia_s6_complexity_delta if state.ia_s6_kind == 'process' else 0}
     return params
 
 
@@ -117,9 +100,7 @@ def read_params():
 def render_settings(model):
     for key, value in defaults(model).items():
         st.session_state.setdefault(key, value)
-    st.session_state.setdefault("ia_preset", CUSTOM)
 
-    presets = {s["id"]: s["title"] for s in model.scenarios.values()}
     options = element_options(model)
     suppliers = {s: model.suppliers[s]["name"] for s in sorted(model.suppliers, key=lambda s: model.suppliers[s]["name"])}
     active = [s for s in suppliers if model.supplier_parts(s)]
@@ -130,43 +111,57 @@ def render_settings(model):
 
     with st.container(border=True):
         st.markdown("##### Paramètres des facteurs d'impact")
-        head = st.columns([4, 6, 2], vertical_alignment="bottom")
-        head[0].selectbox("Exemple préréglé", [CUSTOM, *presets], key="ia_preset", format_func=lambda v: presets.get(v, v), on_change=apply_preset, args=(model,))
-        head[1].multiselect("Éléments à impacter", list(options), key="ia_elements", format_func=options.get, on_change=mark_custom, placeholder="Aucun élément : le facteur touche toutes les pièces concernées")
-        head[2].button("Réinitialiser", key="reset_impacts", on_click=reset_params, args=(model,), width="stretch")
+        head = st.columns([10, 2], vertical_alignment="bottom")
+        head[0].multiselect("Éléments à impacter", list(options), key="ia_elements", format_func=options.get, placeholder="Aucun élément : le facteur touche toutes les pièces concernées")
+        head[1].button("Réinitialiser", key="reset_impacts", on_click=reset_params, args=(model,), width="stretch")
 
         state = st.session_state
-        columns = st.columns(5, gap="small")
+        columns = [*st.columns(3, gap="small"), *st.columns(3, gap="small")]
         with columns[0], st.container(border=True, height="stretch"):
-            st.toggle("Rupture fournisseur", key="ia_s1_on", on_change=mark_custom)
+            st.toggle("Rupture fournisseur", key="ia_s1_on")
             off = not state.ia_s1_on
-            st.selectbox("Fournisseur à l'arrêt", [ELEMENTS_PRIMARY, *active], key="ia_s1_supplier", format_func=supplier_label, disabled=off, on_change=mark_custom)
-            st.slider("Durée (semaines)", 1, 30, key="ia_s1_weeks", disabled=off, on_change=mark_custom)
+            st.selectbox("Fournisseur à l'arrêt", [ELEMENTS_PRIMARY, *active], key="ia_s1_supplier", format_func=supplier_label, disabled=off)
+            st.slider("Durée (semaines)", 1, 30, key="ia_s1_weeks", disabled=off)
         with columns[1], st.container(border=True, height="stretch"):
-            st.toggle("Prix d'un matériau", key="ia_s2_on", on_change=mark_custom)
+            st.toggle("Prix d'un matériau", key="ia_s2_on")
             off = not state.ia_s2_on
-            st.selectbox("Matériau", material_options(model), key="ia_s2_material", disabled=off, on_change=mark_custom, help="Une famille regroupe toutes ses nuances. Vous pouvez aussi choisir une seule nuance.")
-            st.slider("Variation (%)", -40, 60, key="ia_s2_pct", disabled=off, on_change=mark_custom, help="Seule la part indexée du prix suit le marché.")
+            st.selectbox("Matériau", material_options(model), key="ia_s2_material", disabled=off, help="Une famille regroupe toutes ses nuances. Vous pouvez aussi choisir une seule nuance.")
+            st.slider("Variation (%)", -40, 60, key="ia_s2_pct", disabled=off, help="Seule la part indexée du prix suit le marché.")
         with columns[2], st.container(border=True, height="stretch"):
-            st.toggle("Changement de fournisseur", key="ia_s3_on", on_change=mark_custom)
+            st.toggle("Changement de fournisseur", key="ia_s3_on")
             off = not state.ia_s3_on
-            st.selectbox("Fournisseur remplacé", [ELEMENTS_PRIMARY, *active], key="ia_s3_from", format_func=supplier_label, disabled=off, on_change=mark_custom)
-            st.selectbox("Nouveau fournisseur", [BEST_ALTERNATIVE, *suppliers], key="ia_s3_to", format_func=supplier_label, disabled=off, on_change=mark_custom, help="Il doit être référencé pour la pièce.")
-            st.slider("Part de volume déplacée (%)", 10, 100, step=10, key="ia_s3_share", disabled=off, on_change=mark_custom)
+            st.selectbox("Fournisseur remplacé", [ELEMENTS_PRIMARY, *active], key="ia_s3_from", format_func=supplier_label, disabled=off)
+            st.selectbox("Nouveau fournisseur", [BEST_ALTERNATIVE, *suppliers], key="ia_s3_to", format_func=supplier_label, disabled=off, help="Il doit être référencé pour la pièce.")
+            st.slider("Part de volume déplacée (%)", 10, 100, step=10, key="ia_s3_share", disabled=off)
         with columns[3], st.container(border=True, height="stretch"):
-            st.toggle("Release", key="ia_s4_on", on_change=mark_custom)
+            st.toggle("Release", key="ia_s4_on")
             off = not state.ia_s4_on
-            st.selectbox("Maturité visée", ["FROZEN", "RELEASED"], key="ia_s4_target", disabled=off, on_change=mark_custom)
-            st.date_input("Jalon", key="ia_s4_gate", format="DD/MM/YYYY", disabled=off, on_change=mark_custom, help="Sans élément choisi : seules les pièces prévues à temps sont promues. Avec des éléments : ils sont promus quoi qu'il arrive.")
+            st.selectbox("Maturité visée", ["FROZEN", "RELEASED"], key="ia_s4_target", disabled=off)
+            st.date_input("Jalon", key="ia_s4_gate", format="DD/MM/YYYY", disabled=off, help="Sans élément choisi : seules les pièces prévues à temps sont promues. Avec des éléments : ils sont promus quoi qu'il arrive.")
         with columns[4], st.container(border=True, height="stretch"):
-            st.toggle("Allègement", key="ia_s5_on", on_change=mark_custom)
+            st.toggle("Allègement", key="ia_s5_on")
             off = not state.ia_s5_on
-            st.slider("Masse cible (kg)", 85.0, 100.0, step=0.5, key="ia_s5_target", disabled=off, on_change=mark_custom)
-            st.multiselect("Options imposées", list(mass_options), key="ia_s5_options", disabled=off, on_change=mark_custom, placeholder="Plan au meilleur coût",
+            st.slider("Masse cible (kg)", 85.0, 100.0, step=0.5, key="ia_s5_target", disabled=off)
+            st.multiselect("Options imposées", list(mass_options), key="ia_s5_options", disabled=off, placeholder="Plan au meilleur coût",
                            format_func=lambda o: f"{mass_options[o]['part']} : {mass_options[o]['label']} ({signed_kg(mass_options[o]['delta_mass'])})")
 
-        if state.ia_preset != CUSTOM:
-            theme.note(f"<b>Scénario fictif.</b> {escape(model.scenarios[state.ia_preset]['narrative']).replace('$', '&#36;')}")
+        with columns[5], st.container(border=True, height="stretch"):
+            st.toggle("Versioning · pièce modifiée", key="ia_s6_on")
+            off = not state.ia_s6_on
+            st.selectbox("Pièce modifiée", [p["xml_id"] for p in model.physical_parts], key="ia_s6_part", format_func=model.node_label, disabled=off, on_change=reset_change_fields)
+            part = model.products[state.ia_s6_part]
+            st.selectbox("Nature du changement", list(CHANGE_KINDS), key="ia_s6_kind", format_func=CHANGE_KINDS.get, disabled=off, on_change=reset_change_fields)
+            if state.ia_s6_kind == 'material':
+                materials = list(model.materials)
+                st.selectbox("Nouveau matériau", materials, index=materials.index(part['material']) if part['material'] in materials else 0, key='ia_s6_material', disabled=off)
+            if state.ia_s6_kind == 'process':
+                st.slider("Variation de difficulté de fabrication", -2, 2, key='ia_s6_complexity_delta', disabled=off, help="Écart appliqué aux notes de procédé et de précision, chacune bornée de 1 à 5.")
+            neighbors = list(dict.fromkeys(i['other'] for i in model.real_interfaces(part['xml_id'])))
+            st.multiselect("Interfaces concernées", neighbors, default=[] if state.ia_s6_kind == 'process' else neighbors, key='ia_s6_interfaces', format_func=model.node_label, disabled=off)
+            st.caption(f"Traçabilité : révision {part['revision']} → {impact.next_revision(part)}.")
+            st.slider("Variation de masse (%)", -50, 50, key="ia_s6_mass_pct", disabled=off)
+            st.slider("Revalidation (semaines)", 1, 52, key="ia_s6_weeks", disabled=off, help="Le délai effectif respecte aussi la durée de l’essai d’interface le plus long.")
+
         st.caption("Facteurs combinables. Si seul le fournisseur est choisi, toutes ses pièces sont concernées ; les éléments choisis limitent le périmètre.")
 
 
@@ -344,16 +339,40 @@ def render_touched(model, rows):
     st.markdown(f"**Pièces touchées ({len(rows)})** : cochez une ligne pour ouvrir la fiche")
     table = [{
         "Pièce": r["part"], "Facteurs": r["factors"],
+        "Rév. réf.": r["revision_before"], "Rév. scén.": r["revision_after"],
         "Masse réf. (kg)": round(r["mass_before"], 3), "Masse scén. (kg)": round(r["mass_after"], 3),
         "Coût réf. (€)": round(r["cost_before"], 2), "Coût scén. (€)": round(r["cost_after"], 2),
         "Qualité réf.": round(r["quality_before"]), "Qualité scén.": round(r["quality_after"]),
         "Risque réf.": r["risk_before"], "Risque scén.": r["risk_after"],
         "Fournisseurs réf.": r["suppliers_before"], "Fournisseurs scén.": r["suppliers_after"],
+        "Qualifiés réf.": r["qualified_before"], "Qualifiés scén.": r["qualified_after"],
         "Matériau scén.": r["material_after"], "Maturité réf.": r["maturity_before"], "Maturité scén.": r["maturity_after"], "ID PLM": r["plm_id"],
     } for r in rows]
     ids = [node_id(model, r["part_id"]) for r in rows]
     st.dataframe(table, hide_index=True, width="stretch", key="impact_table", on_select=open_from_table("impact_table", ids), selection_mode="single-row",
                  column_config={name: st.column_config.NumberColumn(format="localized") for name in ("Masse réf. (kg)", "Masse scén. (kg)", "Coût réf. (€)", "Coût scén. (€)")})
+
+
+def render_versioning(detail):
+    st.markdown(f"**Impact de la modification · {detail['part']} · {CHANGE_KINDS[detail['kind']]}**")
+    columns = st.columns(4)
+    columns[0].metric("Revalidation", f"{detail['weeks']} semaines")
+    columns[1].metric("Fin de revalidation prévue", date.fromisoformat(detail['planned_release']).strftime('%d/%m/%Y'))
+    columns[2].metric("Interfaces à revérifier", detail['interfaces'])
+    columns[3].metric("Coût unique des essais", compact_eur(detail['one_off']))
+    st.caption("État simulé après modification : pièce en IN_WORK, qualification des fournisseurs remise en cours. "
+               "La variation de prix suit la matière consommée ; la conversion est conservée. "
+               "Le délai couvre aussi l’essai le plus long. Le coût unique est présenté séparément du coût par e-drive.")
+    st.markdown("**Impact sur les critères de risque de la pièce**")
+    st.dataframe([{"Critère": r['criterion'], "Points avant": round(r['before'], 2), "Points après": round(r['after'], 2), "Écart": round(r['after'] - r['before'], 2), "Explication": r['detail']} for r in detail['criteria']], hide_index=True, width="stretch")
+    with st.expander("Impact sur les critères de qualité"):
+        st.dataframe([{"Critère": r['criterion'], "Points avant": round(r['before'], 2), "Points après": round(r['after'], 2), "Écart": round(r['after'] - r['before'], 2)} for r in detail['quality_criteria']], hide_index=True, width="stretch")
+    if detail['neighbors']:
+        st.markdown("**Pièces liées à revérifier**")
+        st.dataframe([{"Pièce": r['part'], "Interface": r['type'], "Contrôle": r['test']} for r in detail['neighbors']], hide_index=True, width="stretch")
+    if detail['tests']:
+        st.dataframe([{"Essai": test['test'], "Coût (€)": test['cost_eur']} for test in detail['tests']], hide_index=True, width="stretch")
+    st.caption("Chaînes d’assemblage concernées : " + " · ".join(detail['assemblies']))
 
 
 def render_method():
@@ -363,7 +382,7 @@ def render_method():
         st.markdown(
             "Une option d'allègement retire 5 points si sa faisabilité est moyenne, 15 si elle est faible.\n\n"
             "**Score de risque d'une pièce, sur 100** : barème détaillé dans l'onglet Risques et interdépendances. "
-            "Une option d'allègement ajoute jusqu'à 15 points de risque technique.\n\n"
+            "Une option d'allègement augmente le critère Criticité intrinsèque, dans sa limite de 16,67 points.\n\n"
             "**Score du produit** : moyenne pondérée par la classe de la pièce (A compte 3 fois, B 2 fois, C 1 fois). "
             "Le score des pièces touchées fait la même moyenne sur les seules pièces modifiées.\n\n"
             "**Hypothèses** : la rupture montre l'état pendant l'arrêt, le changement de fournisseur l'état une fois qualifié, "
@@ -394,6 +413,8 @@ def render_results(model, result, active):
         render_release(details["release"])
     if details.get("mass"):
         render_mass(model, details["mass"])
+    if details.get("versioning"):
+        render_versioning(details["versioning"])
     if result["touched"]:
         render_touched(model, result["touched"])
     render_method()

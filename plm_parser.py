@@ -224,15 +224,19 @@ def parse_enrichment(root, products):
     for part in enrichment.find(EXT + "PartData"):
         attrs = ext_attrs(part)
         product = products[attrs.pop("ref")]
-        attrs.pop("plm_id")
-        attrs.pop("name")
+        attrs.pop("plm_id", None)
+        attrs.pop("name", None)
+        # Les constats affichés sont recalculés par l'application.
+        for computed in ("reasons", "reason", "alerts", "warnings", "controls", "findings", "score", "risk_score", "sourcing_note", "blocking", "maturity_note"):
+            attrs.pop(computed, None)
         product.update(attrs)
         product["sourcing"] = [ext_attrs(e) for e in part.findall(EXT + "Sourcing")]
-        product["revisions"] = [ext_attrs(e) for e in part.findall(EXT + "Revision")]
+        product["revisions"] = [{key: value for key, value in ext_attrs(e).items() if key != "reason"} for e in part.findall(EXT + "Revision")]
         product["mass_options"] = [ext_attrs(e) for e in part.findall(EXT + "MassOption")]
 
     def section(tag):
-        return [ext_attrs(e) for e in enrichment.find(EXT + tag)]
+        element = enrichment.find(EXT + tag)
+        return [ext_attrs(e) for e in element] if element is not None else []
 
     return {
         **ext_attrs(enrichment),
@@ -241,13 +245,14 @@ def parse_enrichment(root, products):
         "suppliers": section("Suppliers"),
         "interface_types": section("InterfaceTypes"),
         "interfaces": section("Interfaces"),
-        "scenarios": section("Scenarios"),
     }
 
 
 def parse_plm(xml_path):
     root = ET.parse(xml_path).getroot()
     structure = root.find(NS + "ProductStructure")
+    if structure is None or not structure.get("rootRefs"):
+        raise ValueError("Structure produit XPDMXML absente ou référence racine manquante.")
     root_id = structure.get("rootRefs")
 
     products = {e.get("id"): parse_product(e) for e in structure.findall(NS + "Product")}

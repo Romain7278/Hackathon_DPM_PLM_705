@@ -11,6 +11,13 @@ EXPLORER_TREE = "Arborescence et fiche"
 PERSISTENT_KEYS = ("explorer_tab", "bom_groups", "bom_families", "bom_maturities", "map_metric", "risk_detail_part")
 
 
+def reset_for_xml():
+    """Évite de conserver les pièces, filtres et simulations d'un autre fichier."""
+    for key in list(st.session_state):
+        if key in PERSISTENT_KEYS or str(key).startswith("ia_") or key in ("selected_id", "chat_messages", "pending_question"):
+            del st.session_state[key]
+
+
 def keep_widget_state():
     for key in list(st.session_state.keys()):
         if key in PERSISTENT_KEYS or str(key).startswith("ia_"):
