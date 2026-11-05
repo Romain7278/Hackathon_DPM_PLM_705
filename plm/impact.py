@@ -569,7 +569,10 @@ def analyze(model, params):
         subset = (weighted_average(model, before[values_key], touched_ids), weighted_average(model, after[values_key], touched_ids)) if touched_ids else None
         return {"product": product, "touched": subset}
 
-    suppliers = builder.suppliers_tracked or [max(before["suppliers"], key=before["suppliers"].get)]
+    suppliers = sorted({link['supplier'] for part_id in touched_ids
+                        for current_model in (model, scenario)
+                        for link in current_model.products[part_id]['sourcing']},
+                       key=lambda sid: model.suppliers[sid]['name'])
     families = builder.families_tracked or [max(before["materials"], key=before["materials"].get)]
 
     details = dict(builder.details)
@@ -610,7 +613,7 @@ def analyze(model, params):
             "risk": score("risk"),
             "critical": (before["critical"], after["critical"]),
             "single_source": (before["single_source"], after["single_source"]),
-            "suppliers": [{"id": s, "label": model.suppliers[s]["name"], "before": before["suppliers"].get(s, 0.0), "after": after["suppliers"].get(s, 0.0)} for s in suppliers[:4]],
+            "suppliers": [{"id": s, "label": model.suppliers[s]["name"], "before": before["suppliers"].get(s, 0.0), "after": after["suppliers"].get(s, 0.0)} for s in suppliers],
             "materials": [{"label": f, "before": before["materials"].get(f, 0.0), "after": after["materials"].get(f, 0.0)} for f in families[:4]],
         },
         "details": details,

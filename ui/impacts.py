@@ -2,6 +2,7 @@
 from datetime import date
 from html import escape
 
+import plotly.graph_objects as go
 import streamlit as st
 
 from plm import impact, scenarios
@@ -201,6 +202,23 @@ def share_groups(items):
     return groups
 
 
+def supplier_delta_chart(items):
+    labels = [item['label'] for item in items]
+    deltas = [(item['after'] - item['before']) * 100 for item in items]
+    fig = go.Figure(go.Bar(
+        x=labels, y=deltas,
+        marker_color=[theme.SERIES[0] if delta >= 0 else theme.SERIES[1] for delta in deltas],
+        customdata=[[item['before'] * 100, item['after'] * 100] for item in items],
+        hovertemplate="%{x}<br>Variation : %{y:+.2f} points<br>Référence : %{customdata[0]:.2f} %<br>Scénario : %{customdata[1]:.2f} %<extra></extra>",
+    ))
+    theme.style_figure(fig, height=400, legend_visible=False, margin=dict(l=8, r=12, t=15, b=12))
+    fig.update_xaxes(title_text="Fournisseurs des pièces impactées", type="category", tickmode="array", tickvals=labels, tickangle=-55, tickfont=dict(size=10))
+    fig.update_yaxes(title_text="Δ de part du coût (points de %)", zeroline=True, zerolinecolor=theme.BASELINE, rangemode="tozero")
+    if not any(deltas):
+        fig.update_yaxes(range=[-1, 1])
+    return fig
+
+
 def render_cards(model, result, comparison_label="Scénario", show_shares=True):
     data = result["indicators"]
     mass_before, mass_after = data["mass"]
@@ -236,7 +254,7 @@ def render_cards(model, result, comparison_label="Scénario", show_shares=True):
         ]),
         card("Qualité", quality_groups),
         card("Risque", risk_groups),
-        card("Part des fournisseurs dans le coût global", share_groups(data["suppliers"])),
+        "",
         card("Part des matériaux dans le coût global", share_groups(data["materials"])),
     ]
     titles = ["Masse", "Coût", "Qualité", "Risque", "Part des fournisseurs", "Part des matériaux"]
@@ -247,7 +265,7 @@ def render_cards(model, result, comparison_label="Scénario", show_shares=True):
         "Risque sur 100 : plus il est élevé, plus la pièce est exposée. Les priorités choisies dans Risques et interdépendances (Élevé 30, Normal 20, Faible 10) sont normalisées sur 100. "
         + " · ".join(f"{c['label']} : {c['max']:.1f} points maximum" for c in scenarios.risk_criteria(model.risk_priorities))
         + ". Moyenne par classe A ×3, B ×2, C ×1. Une pièce A/B avec au plus une source qualifiée reste classée critique, quel que soit son score.",
-        "Coût des achats attribué à chaque fournisseur / coût total de la nomenclature. Les volumes de chaque pièce déterminent la répartition. Sert à identifier une concentration des achats ; une hausse de part n'est pas automatiquement défavorable.",
+        "Tous les fournisseurs référencés pour les pièces impactées sont affichés, y compris les alternatives et les fournisseurs retirés. Chaque barre montre la part du coût global après scénario moins celle de référence, en points de pourcentage. Une variation nulle reste affichée ; une hausse n'est pas automatiquement défavorable.",
         "Coût de matière consommée pour une famille (masse utilisée × coût au kg × quantités) / coût total de la nomenclature. Sert à repérer les familles qui concentrent les dépenses.",
     ]
     count, columns_per_row = (6, 3) if show_shares else (4, 2)
@@ -258,7 +276,13 @@ def render_cards(model, result, comparison_label="Scénario", show_shares=True):
                 label.markdown(f"**{titles[i]}**")
                 with help_button.popover("?", width="content"):
                     st.write(descriptions[i])
-                st.html(cards[i].replace(f"<h5>{escape(titles[i])}</h5>", "").replace("<h5>Part des fournisseurs dans le coût global</h5>", "").replace("<h5>Part des matériaux dans le coût global</h5>", "").replace(">Scénario<", f">{escape(comparison_label)}<"))
+                if i == 4:
+                    if data['suppliers']:
+                        theme.show(supplier_delta_chart(data['suppliers']), key="impact_supplier_deltas")
+                    else:
+                        st.info("Aucune pièce impactée : activez un scénario pour comparer les fournisseurs.")
+                else:
+                    st.html(cards[i].replace(f"<h5>{escape(titles[i])}</h5>", "").replace("<h5>Part des matériaux dans le coût global</h5>", "").replace(">Scénario<", f">{escape(comparison_label)}<"))
 
 
 # ------------------------------------------------------------------ Résultats complémentaires par facteur
