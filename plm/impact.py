@@ -571,7 +571,7 @@ def analyze(model, params):
 
     suppliers = sorted({link['supplier'] for part_id in touched_ids
                         for current_model in (model, scenario)
-                        for link in current_model.products[part_id]['sourcing']},
+                        for link in current_model.products[part_id]['sourcing'] if link['share_pct'] > 0},
                        key=lambda sid: model.suppliers[sid]['name'])
     families = builder.families_tracked or [max(before["materials"], key=before["materials"].get)]
 

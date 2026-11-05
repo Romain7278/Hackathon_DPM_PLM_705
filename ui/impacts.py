@@ -265,7 +265,7 @@ def render_cards(model, result, comparison_label="Scénario", show_shares=True):
         "Risque sur 100 : plus il est élevé, plus la pièce est exposée. Les priorités choisies dans Risques et interdépendances (Élevé 30, Normal 20, Faible 10) sont normalisées sur 100. "
         + " · ".join(f"{c['label']} : {c['max']:.1f} points maximum" for c in scenarios.risk_criteria(model.risk_priorities))
         + ". Moyenne par classe A ×3, B ×2, C ×1. Une pièce A/B avec au plus une source qualifiée reste classée critique, quel que soit son score.",
-        "Tous les fournisseurs référencés pour les pièces impactées sont affichés, y compris les alternatives et les fournisseurs retirés. Chaque barre montre la part du coût global après scénario moins celle de référence, en points de pourcentage. Une variation nulle reste affichée ; une hausse n'est pas automatiquement défavorable.",
+        "Seuls les fournisseurs ayant du volume sur les pièces impactées avant ou après le scénario sont affichés. Les candidats sans volume sont exclus. Chaque barre montre la part du coût global après scénario moins celle de référence, en points de pourcentage. Une variation nulle reste affichée ; une hausse n'est pas automatiquement défavorable.",
         "Coût de matière consommée pour une famille (masse utilisée × coût au kg × quantités) / coût total de la nomenclature. Sert à repérer les familles qui concentrent les dépenses.",
     ]
     count, columns_per_row = (6, 3) if show_shares else (4, 2)
