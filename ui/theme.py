@@ -61,7 +61,9 @@ CSS = """
 [data-testid="stMetricLabel"] { height: auto; }
 [data-testid="stMetricLabel"] * { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
 [data-testid="stMetricLabel"] p { font-size: .76rem; color: #cbd5e1; line-height: 1.2; }
-.st-key-main_tab > div > [data-baseweb="tab-list"] button p, .st-key-main_tab [role="tablist"]:first-of-type button p { font-size: 1.05rem; font-weight: 600; }
+[data-testid="stMain"] [role="tablist"]:not([role="tabpanel"] [role="tablist"]) button p { font-size: 2.5rem !important; font-weight: 800 !important; line-height: 1.3; }
+[data-testid="stMain"] [role="tablist"]:not([role="tabpanel"] [role="tablist"]) button { font-size: 2.5rem !important; height: auto !important; min-height: 80px; padding: 18px 22px; }
+[data-testid="stMain"] [role="tablist"]:not([role="tabpanel"] [role="tablist"]) [data-testid="stIconMaterial"] { font-size: 2.7rem !important; }
 .plm-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: .2rem; }
 .plm-header h1 { font-size: 1.45rem; font-weight: 700; margin: 0; padding: 0; }
 .plm-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 .5rem; }

@@ -42,7 +42,11 @@ except (ET.ParseError, ValueError, KeyError, TypeError) as error:
 
 chat.render(model)
 
-tabs = st.tabs([MAIN_EXPLORER, MAIN_RISKS, MAIN_IMPACTS, MAIN_VERSIONS], key="main_tab", on_change="rerun")
+main_tabs = [MAIN_EXPLORER, MAIN_RISKS, MAIN_IMPACTS, MAIN_VERSIONS]
+for label in main_tabs:
+    if st.session_state.get("main_tab") == label.split(": ", 1)[-1]:
+        st.session_state.main_tab = label
+tabs = st.tabs(main_tabs, key="main_tab", on_change="rerun")
 with tabs[0]:
     if tabs[0].open:
         explorer.render(model)

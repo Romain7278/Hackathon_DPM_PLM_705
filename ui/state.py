@@ -1,10 +1,10 @@
 """État de navigation partagé : pièce ouverte, onglet actif, paramètres conservés entre onglets."""
 import streamlit as st
 
-MAIN_EXPLORER = "Product Explorer"
-MAIN_RISKS = "Risques et interdépendances"
-MAIN_IMPACTS = "Analyse d'impacts"
-MAIN_VERSIONS = "Suivi de versions"
+MAIN_EXPLORER = ":material/account_tree: Product Explorer"
+MAIN_RISKS = ":material/warning: Risques et interdépendances"
+MAIN_IMPACTS = ":material/analytics: Analyse d'impacts"
+MAIN_VERSIONS = ":material/history: Suivi de versions"
 EXPLORER_TREE = "Arborescence et fiche"
 
 # Streamlit oublie l'état d'un widget qui n'est plus affiché : on le fige pour retrouver ses réglages en changeant d'onglet.
