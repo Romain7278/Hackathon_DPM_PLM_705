@@ -7,46 +7,75 @@ import streamlit as st
 # Palette validée avec le script du skill dataviz, dans cet ordre fixe. Une famille garde toujours sa couleur.
 FAMILY_COLORS = {"Acier": "#2a78d6", "Aluminium": "#eb6834", "Acier électrique": "#1baf7a", "Cuivre": "#eda100", "Fonte": "#e87ba4", "Polymère": "#008300", "Magnésium": "#6250d6"}
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a"]
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
 # Maturité : échelle ordonnée à une seule teinte, plus sombre quand la pièce est plus avancée.
 MATURITY_COLORS = {"PRIVATE": "#b7d3f6", "IN_WORK": "#3987e5", "FROZEN": "#1c5cab", "RELEASED": "#0d366b", "OBSOLETE": "#d03b3b"}
-STATUS_COLORS = {"Prêt": "#0ca30c", "À promouvoir": "#fab219", "En retard": "#ec835a", "Bloquant": "#d03b3b", "À exclure": "#c3c2b7"}
+STATUS_COLORS = {"Prêt": "#0ca30c", "À promouvoir": "#fab219", "En retard": "#ec835a", "Bloquant": "#d03b3b", "À exclure": "#64748b"}
+# Complexité : échelle ordonnée à une seule teinte, plus sombre quand la pièce est plus complexe.
+COMPLEXITY_COLORS = {"Très élevée": "#0d366b", "Élevée": "#1c5cab", "Moyenne": "#3987e5", "Simple": "#b7d3f6"}
 LEVEL_COLORS = {"Critique": "#d03b3b", "Élevé": "#ec835a", "Modéré": "#fab219", "Faible": "#0ca30c"}
-INK = "#0b0b0b"
-INK2 = "#52514e"
-MUTED = "#6c6b66"
-GRID = "#e1e0d9"
-BASELINE = "#c3c2b7"
-SURFACE = "#ffffff"
-NEUTRAL_BAR = "#52514e"
+INK = "#f3f4f6"
+INK2 = "#cbd5e1"
+MUTED = "#94a3b8"
+GRID = "#374151"
+BASELINE = "#64748b"
+SURFACE = "#1f2937"
+NEUTRAL_BAR = "#cbd5e1"
 
 CSS = """
 <style>
-.stMainBlockContainer { padding: 1rem 1.6rem 3rem; max-width: 100%; }
-section[data-testid="stSidebar"] { min-width: 390px; max-width: 460px; }
-section[data-testid="stSidebar"] .stMainBlockContainer, section[data-testid="stSidebarContent"] { padding-top: .2rem; }
-[data-testid="stMetric"] { background: #f7f7f4; border-radius: 8px; padding: 8px 12px; }
+.st-key-maturity_situation [data-testid="stMetricValue"] { font-size: 2rem; }
+.st-key-maturity_situation [data-testid="stMetricLabel"] p { font-size: .95rem; }
+.stMainBlockContainer { padding: 1rem 1.6rem 5rem; max-width: 100%; }
+/* Assistant : bouton flottant, puis panneau sur le quart gauche. Le contenu de la page se décale au lieu d'être recouvert. */
+.stMainBlockContainer:has(.st-key-chat_panel) { margin-left: max(25vw, 320px); width: calc(100% - max(25vw, 320px)); }
+.st-key-chat_toggle { position: fixed; left: 20px; bottom: 20px; z-index: 1000; width: auto; }
+.st-key-chat_toggle button { background: #0d366b; color: #fff; border: 0; border-radius: 999px; padding: 8px 18px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.st-key-chat_toggle button:hover, .st-key-chat_toggle button:focus { background: #1c5cab; color: #fff; }
+.st-key-chat_panel { position: fixed; left: 0; top: 0; bottom: 0; width: 25vw; min-width: 320px; height: 100vh; z-index: 1000000; background: #1f2937; border-right: 1px solid #374151; padding: 12px 14px; overflow: hidden; box-shadow: 2px 0 12px rgba(0,0,0,.08); }
+.st-key-chat_panel > [data-testid="stLayoutWrapper"]:has(> .st-key-chat_history) { flex: 1 1 0 !important; height: auto !important; min-height: 0; }
+.st-key-chat_history { height: 100% !important; }
+.plm-table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.3; margin-bottom: .6rem; }
+.plm-table th { text-align: left; font-weight: 600; color: #cbd5e1; border-bottom: 1px solid #64748b; padding: 4px 8px 4px 0; }
+.plm-table td { border-bottom: 1px solid #374151; padding: 4px 8px 4px 0; vertical-align: top; }
+.plm-table td.num, .plm-table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ia-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 12px; margin-bottom: .6rem; }
+.ia-card { border: 0; border-radius: 8px; padding: 10px 12px; background: #1f2937; }
+.ia-card h5 { font-size: .95rem; font-weight: 600; margin: 0 0 6px; padding: 0; color: #f3f4f6; }
+.ia-group { margin-bottom: 9px; }
+.ia-group:last-child { margin-bottom: 0; }
+.ia-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: .8rem; color: #cbd5e1; margin-bottom: 2px; }
+.ia-delta { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ia-delta.good { color: #4ade80; }
+.ia-delta.bad { color: #f87171; }
+.ia-delta.neutral { color: #cbd5e1; }
+.ia-delta.same { color: #94a3b8; font-weight: 400; }
+.ia-row { display: grid; grid-template-columns: 62px minmax(0, 1fr) 86px; align-items: center; gap: 6px; font-size: .76rem; color: #cbd5e1; line-height: 1.25rem; }
+.ia-track { display: block; height: 12px; background: #293548; border-radius: 3px; overflow: hidden; }
+.ia-track i { display: block; height: 100%; border-radius: 3px; }
+.ia-val { text-align: right; color: #f3f4f6; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ia-foot { font-size: .78rem; color: #cbd5e1; margin-top: 6px; }
+[data-testid="stMetric"] { background: #1f2937; border-radius: 8px; padding: 8px 12px; }
 [data-testid="stMetricValue"] { font-size: 1.18rem; font-weight: 600; line-height: 1.25; height: auto; }
 [data-testid="stMetricValue"] * { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
 [data-testid="stMetricLabel"] { height: auto; }
 [data-testid="stMetricLabel"] * { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
-[data-testid="stMetricLabel"] p { font-size: .76rem; color: #52514e; line-height: 1.2; }
+[data-testid="stMetricLabel"] p { font-size: .76rem; color: #cbd5e1; line-height: 1.2; }
 .st-key-main_tab > div > [data-baseweb="tab-list"] button p, .st-key-main_tab [role="tablist"]:first-of-type button p { font-size: 1.05rem; font-weight: 600; }
 .plm-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: .2rem; }
 .plm-header h1 { font-size: 1.45rem; font-weight: 700; margin: 0; padding: 0; }
-.plm-header span { color: #52514e; font-size: .85rem; }
 .plm-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 .5rem; }
-.plm-badge { display: inline-block; font-size: .74rem; line-height: 1.2rem; padding: 0 7px; border-radius: 4px; background: #f0efec; color: #0b0b0b; white-space: nowrap; }
-.plm-alert { display: flex; gap: 8px; padding: 6px 10px; border-radius: 6px; background: #f7f7f4; margin-bottom: 5px; font-size: .86rem; line-height: 1.3; }
+.plm-badge { display: inline-block; font-size: .74rem; line-height: 1.2rem; padding: 0 7px; border-radius: 4px; background: #374151; color: #f3f4f6; white-space: nowrap; }
+.plm-alert { display: flex; gap: 8px; padding: 6px 10px; border-radius: 6px; background: #1f2937; margin-bottom: 5px; font-size: .86rem; line-height: 1.3; }
 .plm-alert b { white-space: nowrap; font-weight: 600; }
-.plm-note { padding: 8px 12px; border-radius: 6px; background: #eef3fa; margin-bottom: .6rem; font-size: .9rem; line-height: 1.35; }
+.plm-note { padding: 8px 12px; border-radius: 6px; background: #1e3350; margin-bottom: .6rem; font-size: .9rem; line-height: 1.35; }
 .plm-note b { font-weight: 600; }
 .plm-verdict { padding: 10px 14px; border-radius: 8px; margin-bottom: .6rem; font-size: 1rem; font-weight: 600; color: #fff; }
-.plm-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: #52514e; margin-bottom: .2rem; }
+.plm-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: #cbd5e1; margin-bottom: .2rem; }
 .plm-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .plm-kv { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); gap: 3px 10px; font-size: .88rem; margin-bottom: .5rem; }
-.plm-kv dt { color: #6c6b66; margin: 0; }
+.plm-kv dt { color: #94a3b8; margin: 0; }
 .plm-kv dd { margin: 0; overflow-wrap: anywhere; }
-.plm-origin { font-size: .72rem; color: #6c6b66; }
 .plm-source { font-size: .78rem; line-height: 1.3; margin-bottom: 4px; }
 .plm-source code { font-size: .72rem; }
 </style>
@@ -66,7 +95,7 @@ def badges(items):
     spans = []
     for text, color in items:
         if color:
-            ink = "#ffffff" if color in ("#0d366b", "#1c5cab", "#3987e5", "#d03b3b", "#0ca30c", "#008300", "#2a78d6") else INK
+            ink = "#ffffff" if color in ("#0d366b", "#1c5cab", "#3987e5", "#d03b3b", "#0ca30c", "#008300", "#2a78d6") else "#0b0b0b"
             spans.append(f'<span class="plm-badge" style="background:{color};color:{ink}">{escape(str(text))}</span>')
         else:
             spans.append(f'<span class="plm-badge">{escape(str(text))}</span>')
@@ -78,12 +107,22 @@ def note(text):
 
 
 def verdict(text, good):
-    html(f'<div class="plm-verdict" style="background:{"#0a7f0a" if good else "#d03b3b"}">{escape(text)}</div>')
+    html(f'<div class="plm-verdict" style="background:{"#166534" if good else "#d03b3b"}">{escape(text)}</div>')
 
 
 def key_values(rows):
     items = "".join(f"<dt>{escape(str(k))}</dt><dd>{v}</dd>" for k, v in rows)
     html(f'<dl class="plm-kv">{items}</dl>')
+
+
+def table(headers, rows, numeric=()):
+    """Petit tableau dont le texte passe à la ligne, pour les barèmes. Les cellules sont du texte, échappé ici."""
+    def cell(tag, index, value):
+        return f'<{tag} class="num">{escape(str(value))}</{tag}>' if index in numeric else f"<{tag}>{escape(str(value))}</{tag}>"
+
+    head = "".join(cell("th", i, h) for i, h in enumerate(headers))
+    body = "".join("<tr>" + "".join(cell("td", i, v) for i, v in enumerate(row)) + "</tr>" for row in rows)
+    st.html(f'<table class="plm-table"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>')
 
 
 def legend(colors):
@@ -150,4 +189,4 @@ def sources_expander(model, sources, label="Sources PLM utilisées"):
     with st.expander(f"{label} ({len(unique)})"):
         rows = [{"Type": s["type"], "Élément": s["label"], "ID PLM": s["plm_id"], "ID XML / fournisseur": s["id"], "Champs utilisés": s.get("fields", "")} for s in unique.values()]
         st.dataframe(rows, hide_index=True, width="stretch")
-        st.caption(f"Fichier : {model.data['source_file']}. Structure, masses, matériaux, révisions courantes et positions viennent de l'export d'origine ; le reste est simulé.")
+        st.caption(f"Fichier : {model.data['source_file']}.")

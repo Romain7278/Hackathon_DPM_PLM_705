@@ -26,79 +26,174 @@ def blocked_chain(model, part_id):
 # ---------------------------------------------------------------- Criticité
 
 
+COMPLEXITY_POINTS = {"Très élevée": 10, "Élevée": 7, "Moyenne": 4, "Simple": 1}
+INTERFACE_POINTS = ((5, 8, "5 ou plus"), (3, 5, "3 ou 4"), (1, 2, "1 ou 2"), (0, 0, "Aucune"))
+RAW_CRITERIA = [
+    dict(key="sources", label="Sources qualifiées", max=30, scale="Aucune source qualifiée ou aucun fournisseur : 30. Une seule : 25 sans alternative référencée, 20 sinon. Deux : 6. Trois ou plus : 2."),
+    dict(key="replacement", label="Remplacement", max=15, scale="Deux sources qualifiées ou plus : 2. Sinon, aucune alternative en cours : 15. Alternative prête en 26 semaines ou plus : 12, en 12 à 25 semaines : 8, en moins de 12 semaines : 4."),
+    dict(key="lead_time", label="Délai de livraison", max=8, scale="60 jours ou plus : 8. De 30 à 59 jours : 5. Moins de 30 jours : 2. Fournisseur inconnu : 5."),
+    dict(key="origin", label="Origine", max=8, scale="Risque géographique faible : 0. Moyen (Turquie, Serbie, Maroc, Inde, Taïwan) : 5. Élevé (Chine) : 8. Fournisseur inconnu : 5."),
+    dict(key="finance", label="Santé financière", max=8, scale="Notation A : 0. B : 3. C : 8. Fournisseur inconnu : 3."),
+    dict(key="class", label="Classe fonctionnelle", max=8, scale="A (vitale) : 8. B : 4. C (standard) : 1."),
+    dict(key="complexity", label="Complexité de la pièce", max=10, scale="Très élevée (75 ou plus) : 10. Élevée (55 à 74) : 7. Moyenne (30 à 54) : 4. Simple (moins de 30) : 1."),
+    dict(key="interfaces", label="Interdépendances", max=8, scale="5 interfaces ou plus : 8. 3 ou 4 : 5. 1 ou 2 : 2. Aucune : 0."),
+    dict(key="cost", label="Poids dans le coût", max=5, scale="5 % ou plus de la nomenclature : 5. De 2 à 5 % : 3. Moins : 1."),
+]
+
+PRIORITY_WEIGHTS = {"Élevé": 30, "Normal": 20, "Faible": 10}
+
+# Les sous-critères sont normalisés avant application des priorités.
+CRITERIA = [
+    dict(key="sourcing", label="Résilience d’approvisionnement", members=("sources", "replacement"), scale="Moyenne des risques de qualification (0–30) et de remplacement (0–15), normalisés sur 100."),
+    dict(key="lead_time", label="Délai de livraison", members=("lead_time",), scale="Moins de 30 j : 25 %. 30–59 j ou inconnu : 62,5 %. 60 j et plus : 100 %."),
+    dict(key="supplier", label="Robustesse fournisseur", members=("finance", "origin"), scale="Moyenne des risques financier (A : 0, B : 3, C : 8) et géographique (faible : 0, moyen : 5, élevé : 8), chacun sur 8."),
+    dict(key="function", label="Importance fonctionnelle", members=("class", "complexity"), scale="Moyenne de la classe (A : 8, B : 4, C : 1, sur 8) et de la complexité (1, 4, 7 ou 10, sur 10)."),
+    dict(key="interfaces", label="Interdépendances", members=("interfaces",), scale="Aucune : 0 %. 1–2 : 25 %. 3–4 : 62,5 %. 5 et plus : 100 %."),
+    dict(key="cost", label="Poids dans le coût", members=("cost",), scale="Moins de 2 % du coût : 20 %. De 2 à moins de 5 % : 60 %. 5 % et plus : 100 %."),
+]
+CRITERION_DEFINITIONS = {
+    "sourcing": "Possibilité de poursuivre l'approvisionnement grâce aux sources qualifiées et aux alternatives disponibles.",
+    "lead_time": "Temps nécessaire au fournisseur principal pour livrer la pièce.",
+    "supplier": "Exposition aux difficultés financières du fournisseur et aux risques de son pays.",
+    "function": "Importance de la pièce pour le fonctionnement du produit et difficulté de sa fabrication.",
+    "interfaces": "Liens avec d'autres pièces susceptibles de propager les conséquences d'un changement.",
+    "cost": "Part du coût de la pièce, quantités comprises, dans le coût total du produit.",
+}
+
+
+def risk_criteria(priorities=None):
+    priorities = priorities or {}
+    weights = {c['key']: PRIORITY_WEIGHTS[priorities.get(c['key'], 'Normal')] for c in CRITERIA}
+    total = sum(weights.values())
+    return [{**c, 'priority': priorities.get(c['key'], 'Normal'), 'weight': weights[c['key']],
+             'max': 100 * weights[c['key']] / total, 'definition': CRITERION_DEFINITIONS[c['key']]}
+            for c in CRITERIA]
+
+
+def grouped_breakdown(points, details, technical=0, priorities=None):
+    maxima = {c["key"]: c["max"] for c in RAW_CRITERIA}
+    result = []
+    for criterion in risk_criteria(priorities):
+        members = criterion["members"]
+        ratio = sum(points[key] / maxima[key] for key in members) / len(members)
+        value = ratio * criterion["max"]
+        detail = " ; ".join(details[key] for key in members)
+        if criterion["key"] == "function" and technical:
+            adjustment = technical * criterion['max'] / (100 / len(CRITERIA))
+            value = min(criterion["max"], value + adjustment)
+            detail += f" ; changement technique : +{adjustment:g} pts, plafonné au maximum du critère"
+        result.append(dict(key=criterion["key"], label=criterion["label"], max=criterion["max"], points=value, detail=detail))
+    return result
+
+
+def interface_points(count):
+    return next(points for minimum, points, _ in INTERFACE_POINTS if count >= minimum)
+
+
 def criticality(model):
-    """Score sur 100, avec le détail des critères. Une pièce mono-source est au moins « Critique » si elle est de classe A ou B."""
+    """Score de risque sur 100 : somme de 6 critères pondérés par priorité.
+    Une pièce de classe A ou B avec au plus un fournisseur qualifié est toujours « Critique »."""
     total_cost = model.bom_cost()
     rows = []
     for part in model.physical_parts:
         part_id = part["xml_id"]
         links = part["sourcing"]
         qualified = model.qualified_links(part)
-        reasons = []
-        score = 0
-
         klass = part.get("criticality", "C")
-        commodity = 0.5 if klass == "C" else 1  # une pièce standard se requalifie vite ailleurs
+        commodity = 1  # la classe est déjà prise en compte dans son propre groupe
+        reasons = []
+        points = {}
+        details = {}
+
+        def add(key, value, detail):
+            points[key] = value
+            details[key] = detail
+
         if not links:
-            score += 35
+            add("sources", 30, "Aucun fournisseur désigné")
             reasons.append("Aucun fournisseur désigné")
         elif not qualified:
-            score += 35
+            add("sources", 30, f"Aucune source qualifiée sur {len(links)} référencée(s)")
             reasons.append("Aucune source qualifiée")
         elif len(qualified) == 1:
-            score += (30 if len(links) == 1 else 25) * commodity
+            add("sources", (25 if len(links) == 1 else 20) * commodity, f"1 source qualifiée sur {len(links)} référencée(s)" + (", points divisés par 2 (classe C)" if commodity < 1 else ""))
             reasons.append("Un seul fournisseur qualifié" + ("" if len(links) > 1 else ", aucune alternative référencée"))
         elif len(qualified) == 2:
-            score += 8
+            add("sources", 6, "2 sources qualifiées")
         else:
-            score += 2
+            add("sources", 2, f"{len(qualified)} sources qualifiées")
 
-        alternatives = [l["requal_weeks"] + l["ramp_up_weeks"] for l in links if l["qualification"] not in QUALIFIED]
+        primary = model.primary_link(part)
+        # Requalifier le fournisseur principal n'en fait pas une source de secours.
+        alternatives = [l["requal_weeks"] + l["ramp_up_weeks"] for l in links if l["qualification"] not in QUALIFIED and l is not primary]
         if qualified and len(qualified) > 1:
-            score += 2
+            add("replacement", 2, "Une autre source qualifiée prend le relais")
         elif not alternatives:
-            score += 15 * commodity
+            add("replacement", 15 * commodity, "Aucune alternative en cours" + (", points divisés par 2 (classe C)" if commodity < 1 else ""))
         else:
             fastest = min(alternatives)
-            score += 12 if fastest >= 26 else 8 if fastest >= 12 else 4
+            add("replacement", 12 if fastest >= 26 else 8 if fastest >= 12 else 4, f"Alternative prête en {fastest} semaines au mieux")
             reasons.append(f"Alternative disponible en {fastest} semaines au mieux")
 
         primary = model.primary_link(part)
         if primary:
             supplier = model.suppliers[primary["supplier"]]
             lead = primary["lead_time_days"]
-            score += 10 if lead >= 60 else 6 if lead >= 30 else 2
+            add("lead_time", 8 if lead >= 60 else 5 if lead >= 30 else 2, f"{lead} jours chez {supplier['name']}")
             if lead >= 60:
                 reasons.append(f"Délai long : {lead} jours")
-            score += {1: 0, 2: 6, 3: 10}[supplier["geo_risk"]]
+            add("origin", {1: 0, 2: 5, 3: 8}[supplier["geo_risk"]], supplier["country_name"])
             if supplier["geo_risk"] >= 2:
                 reasons.append(f"Origine exposée : {supplier['country_name']}")
-            score += {"A": 0, "B": 4, "C": 10}[supplier["financial_rating"]]
+            add("finance", {"A": 0, "B": 3, "C": 8}[supplier["financial_rating"]], f"Notation {supplier['financial_rating']}")
             if supplier["financial_rating"] == "C":
                 reasons.append(f"Santé financière fragile : {supplier['name']} noté C")
+        else:
+            add("lead_time", 5, "Inconnu : aucun fournisseur actif")
+            add("origin", 5, "Inconnue : aucun fournisseur actif")
+            add("finance", 3, "Inconnue : aucun fournisseur actif")
 
-        score += {"A": 10, "B": 5, "C": 1}[klass]
+        add("class", {"A": 8, "B": 4, "C": 1}[klass], f"Classe {klass}")
         if klass == "A":
             reasons.append("Fonction vitale (classe A)")
 
+        complexity = model.complexity(part)
+        add("complexity", COMPLEXITY_POINTS[complexity["level"]], f"Complexité {complexity['level'].lower()}, {complexity['score']} sur 100 : {complexity['process']}")
+        if complexity["level"] == "Très élevée":
+            reasons.append(f"Pièce très complexe ({complexity['score']} sur 100)")
+
         interfaces = len(model.real_interfaces(part_id))
-        score += 5 if interfaces >= 5 else 3 if interfaces >= 3 else 1
+        add("interfaces", interface_points(interfaces), f"{interfaces} interface(s) avec d'autres pièces")
         if interfaces >= 5:
             reasons.append(f"{interfaces} interdépendances")
 
         cost_share = model.line_cost(part) / total_cost
-        score += 5 if cost_share >= 0.05 else 3 if cost_share >= 0.02 else 1
+        add("cost", 5 if cost_share >= 0.05 else 3 if cost_share >= 0.02 else 1, f"{cost_share:.1%} de la nomenclature".replace(".", ","))
         if cost_share >= 0.05:
             reasons.append(f"{cost_share:.0%} du coût de la nomenclature")
 
-        score = min(round(score), 100)
+        technical = part.get("technical_risk", 0)
+        if technical:
+            add("technical", technical, "Option d'allègement non éprouvée")
+            reasons.append("Changement technique en cours")
+
+        breakdown = grouped_breakdown(points, details, technical, model.risk_priorities)
+        score = min(round(sum(b["points"] for b in breakdown)), 100)
         level = next(name for name, threshold in LEVELS if score >= threshold)
         single_source = model.is_single_source(part)
+        level_reason = f"Score de {score}"
         if single_source and klass in ("A", "B"):
+            if level != "Critique":
+                level_reason = f"Score de {score}, relevé à Critique : classe {klass} avec au plus un fournisseur qualifié"
             level = "Critique"
         elif single_source and level in ("Faible", "Modéré"):
+            level_reason = f"Score de {score}, relevé à Élevé : au plus un fournisseur qualifié"
             level = "Élevé"
 
+        # Les raisons sont toujours générées à partir des contributions calculées.
+        reasons = [f"{b['label']} : {b['detail']}" for b in sorted(breakdown, key=lambda b: -b["points"])[:3] if b["points"] > 0]
+        if single_source:
+            reasons.insert(0, level_reason)
         countries = sorted({model.suppliers[l["supplier"]]["country_name"] for l in model.active_links(part)})
         rows.append({
             "part_id": part_id,
@@ -107,15 +202,21 @@ def criticality(model):
             "plm_name": part["name"],
             "score": score,
             "level": level,
+            "level_reason": level_reason,
             "reasons": reasons,
+            "breakdown": breakdown,
             "sources_referenced": len(links),
             "sources_qualified": len(qualified),
             "single_source": single_source,
             "origin": ", ".join(countries) or "Non désignée",
             "interfaces": interfaces,
             "mass_kg": part["mass_kg"] * model.quantity(part_id),
-            "volume_l": (model.volume_litres(part) or 0) * model.quantity(part_id),
-            "envelope_mm": part.get("envelope_mm", ""),
+            "complexity": complexity["score"],
+            "complexity_level": complexity["level"],
+            "process": complexity["process"],
+            "process_rating": complexity["process_rating"],
+            "precision_rating": complexity["precision_rating"],
+            "operations": complexity["operations"],
             "quantity": model.quantity(part_id),
             "unit_cost": model.unit_cost(part)[0],
             "line_cost": model.line_cost(part),
@@ -241,7 +342,7 @@ def simulate_disruption(model, part_id, supplier_id=None, duration_weeks=8, hori
     part = model.products[part_id]
     links = part["sourcing"]
     if not links:
-        return {"error": f"{part['name']} n'a aucun fournisseur désigné : la rupture ne peut pas être simulée.", "sources": [model.source_ref(part, "sourcing")]}
+        return {"error": f"{part['name']} n'a aucun fournisseur désigné : la rupture ne peut pas être calculée.", "sources": [model.source_ref(part, "sourcing")]}
     if supplier_id:
         disrupted = next((l for l in links if l["supplier"] == supplier_id), None)
         if disrupted is None:
@@ -730,8 +831,11 @@ def part_release_status(model, part, target, gate):
 
     if maturity == "OBSOLETE":
         issues.append("Référence OBSOLETE à remplacer.")
-    elif not maturity_ok:
+    elif MATURITY_RANK[maturity] < rank_target:
         issues.append(f"Maturité {maturity}, {target} attendu.")
+    for wrapper in wrappers:
+        if MATURITY_RANK[wrapper["maturity"]] < rank_target:
+            issues.append(f"Engineering Item {wrapper['display_name']} en {wrapper['maturity']}, {target} attendu.")
     if not links:
         issues.append("Aucun fournisseur désigné.")
     elif not ppap_ok:
@@ -740,8 +844,6 @@ def part_release_status(model, part, target, gate):
         issues.append(f"PPAP non approuvé (prévu le {when}).")
     if links and not priced:
         issues.append("Prix fournisseur manquant.")
-    if part.get("blocking") and issues:
-        issues.append(part["blocking"])
 
     planned = part.get("planned_release")
     ppap_dates = [l["ppap_date"] for l in links if l.get("ppap_date") and l["qualification"] != "APPROVED"] if target == "RELEASED" else []
@@ -881,7 +983,6 @@ def mass_pareto(model, perimeter_id="ID_0"):
             "mass_kg": mass,
             "share": mass / total,
             "volume_l": (model.volume_litres(part) or 0) * line["quantity"],
-            "envelope_mm": part.get("envelope_mm", ""),
             "maturity": part["maturity"],
             "options": len(part["mass_options"]),
         })
@@ -956,14 +1057,14 @@ def summarize_plan(model, chosen, perimeter_mass):
     }
 
 
-def mass_plan(model, perimeter_id="ID_0", target_saving_kg=None, min_feasibility="MEDIUM", max_weeks=None):
+def mass_plan(model, perimeter_id="ID_0", target_saving_kg=None, min_feasibility="MEDIUM", max_weeks=None, allowed_parts=None):
     """Plan au meilleur coût : options triées par coût du kg gagné (heuristique gloutonne), une seule option par pièce."""
     max_weeks = model.weeks_to_sop if max_weeks is None else max_weeks
     perimeter_mass = model.nodes[perimeter_id].total_mass
     if target_saving_kg is None:
         target_saving_kg = max(0.0, perimeter_mass - model.program["mass_target_kg"]) if perimeter_id == "ID_0" else 0.05 * perimeter_mass
     options = mass_options(model, perimeter_id)
-    eligible = [o for o in options if FEASIBILITY_RANK[o["feasibility"]] >= FEASIBILITY_RANK[min_feasibility] and o["weeks"] <= max_weeks]
+    eligible = [o for o in options if FEASIBILITY_RANK[o["feasibility"]] >= FEASIBILITY_RANK[min_feasibility] and o["weeks"] <= max_weeks and (not allowed_parts or o["part_id"] in allowed_parts)]
     chosen = []
     used = set()
     saved = 0.0
@@ -996,7 +1097,7 @@ def mass_plan(model, perimeter_id="ID_0", target_saving_kg=None, min_feasibility
 
 
 def product_kpis(model):
-    from plm.quality import counts
+    from plm.quality import control_findings, counts
 
     table = concentration(model)
     crit = criticality(model)
@@ -1015,8 +1116,8 @@ def product_kpis(model):
         "non_eu_share": table["non_eu_share"],
         "single_source_parts": table["single_source_parts"],
         "critical_parts": sum(r["level"] == "Critique" for r in crit),
-        "interfaces": len(model.enrichment["interfaces"]),
-        "alerts": counts(model.findings),
+        "interfaces": sum(i["type"] != "study" for i in model.enrichment["interfaces"]),
+        "alerts": counts(control_findings(model.findings)),
         "release_ready": release["ready"],
         "release_total": release["total"],
         "bounding_box_mm": model.bounding_box(),

@@ -12,6 +12,8 @@ from plm_parser import parse_plm
 
 DATA_XML = Path(__file__).resolve().parent.parent / "data" / "XPDMXML_ECAR_PLM_ENRICHED.xml"
 
+COMPLEXITY_LEVELS = (("Très élevée", 75), ("Élevée", 55), ("Moyenne", 30), ("Simple", 0))
+OPERATIONS_CEILING = 15
 MATURITY_RANK = {"OBSOLETE": -1, "PRIVATE": 0, "IN_WORK": 1, "FROZEN": 2, "RELEASED": 3}
 QUALIFIED = ("APPROVED", "CONDITIONAL")
 QUALIFICATION_LABELS = {
@@ -131,7 +133,8 @@ class Node:
 
 
 class PlmModel:
-    def __init__(self, data):
+    def __init__(self, data, risk_priorities=None):
+        self.risk_priorities = dict(risk_priorities or {})
         self.data = data
         self.products = data["products"]
         self.instances = data["instances"]
@@ -139,10 +142,10 @@ class PlmModel:
         enrichment = data["enrichment"]
         self.enrichment = enrichment
         self.program = enrichment["program"]
+        self.program["weekly_demand"] = self.program["annual_volume"] / self.program["production_weeks"]
         self.suppliers = {s["id"]: s for s in enrichment["suppliers"]}
         self.materials = {m["plm_name"]: m for m in enrichment["materials"]}
         self.interface_types = {t["id"]: t for t in enrichment["interface_types"]}
-        self.scenarios = {s["id"]: s for s in enrichment["scenarios"]}
 
         self.tree = self._build_node(data["root"], 1, None)
         self.nodes = {}
@@ -221,9 +224,13 @@ class PlmModel:
     def material_of(self, part):
         return self.materials.get(part["material"])
 
-    def material_cost(self, part):
+    def material_price(self, part):
+        """Prix de la matière pour cette pièce : l'analyse d'impacts peut le modifier pièce par pièce."""
         material = self.material_of(part)
-        return part["usage_kg"] * material["price_eur_kg"] if material and part.get("usage_kg") else 0.0
+        return part.get("material_price_eur_kg", material["price_eur_kg"]) if material else 0.0
+
+    def material_cost(self, part):
+        return part["usage_kg"] * self.material_price(part) if part.get("usage_kg") else 0.0
 
     def should_cost(self, part):
         if not part.get("usage_kg"):
@@ -266,6 +273,12 @@ class PlmModel:
 
     def primary_link(self, part):
         return max(self.active_links(part), key=lambda l: l["share_pct"], default=None)
+
+    def complexity(self, part):
+        """Complexité de fabrication sur 100 : procédé 40, précision 30, nombre d'opérations 30."""
+        score = round(40 * (part["process_rating"] - 1) / 4 + 30 * (part["precision_rating"] - 1) / 4 + 30 * min(part["operations"] / OPERATIONS_CEILING, 1))
+        level = next(name for name, threshold in COMPLEXITY_LEVELS if score >= threshold)
+        return {"score": score, "level": level, "process": part["process"], "process_rating": part["process_rating"], "precision_rating": part["precision_rating"], "operations": part["operations"]}
 
     def is_single_source(self, part):
         return len(self.qualified_links(part)) <= 1
@@ -311,7 +324,7 @@ class PlmModel:
         return {"type": "Fournisseur", "id": supplier_id, "plm_id": "", "label": supplier["name"], "fields": fields}
 
     # Recherche
-    def find_part(self, text):
+    def find_part(self, text, fuzzy=True):
         """Retrouve une pièce ou un assemblage par ID, nom ou terme métier. Renvoie une liste de nœuds candidats."""
         raw = str(text).strip()
         if raw in self.nodes:
@@ -337,8 +350,10 @@ class PlmModel:
             for product_id, terms in aliases.items():
                 for term in terms:
                     if re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", query) and len(term) > best_length:
-                        best_length = len(term)
-                        best = [self.nodes[product_id]] if is_assembly else self.nodes_by_part[product_id][:1]
+                        candidates = [self.nodes[product_id]] if is_assembly and product_id in self.nodes else self.nodes_by_part.get(product_id, [])[:1]
+                        if candidates:
+                            best_length = len(term)
+                            best = candidates
         for node in self.nodes.values():
             label = normalize(node.label)
             if len(label) > max(best_length, 3) and label in query:
@@ -346,6 +361,8 @@ class PlmModel:
                 best = [node]
         if best:
             return best
+        if not fuzzy:
+            return []
 
         labels = {normalize(n.label): n for n in self.nodes.values()}
         close = get_close_matches(query, list(labels), n=3, cutoff=0.6)
@@ -394,18 +411,21 @@ class PlmModel:
         ids = {node.part_id, node.id}
         if node.wrapper:
             ids.add(node.wrapper["xml_id"])
-        return [f for f in self.findings if f["product_id"] in ids]
+        return [f for f in self.findings if f["product_id"] in ids or f.get("related") in ids]
 
     def subtree_findings(self, node):
-        found = list(self.findings_for_node(node))
+        found = {id(f): f for f in self.findings_for_node(node)}
         for child in node.children:
-            found.extend(self.subtree_findings(child))
-        return found
+            found.update({id(f): f for f in self.subtree_findings(child)})
+        return list(found.values())
 
 
-def load_model(xml_path=DATA_XML):
+def load_model(xml_path=DATA_XML, risk_priorities=None):
     from plm.quality import run_checks
 
-    model = PlmModel(parse_plm(xml_path))
+    data = parse_plm(xml_path)
+    if data["enrichment"] is None:
+        raise ValueError("Ce XML ne contient pas les données d’enrichissement nécessaires aux analyses.")
+    model = PlmModel(data, risk_priorities=risk_priorities)
     model.findings = run_checks(model)
     return model
