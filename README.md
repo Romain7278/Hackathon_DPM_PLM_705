@@ -1,6 +1,6 @@
-# PLM Intelligence
+# PLM Intelligence - Team 705
 
-Application Streamlit d’analyse d’un e-drive automobile : exploration du produit, risques fournisseurs et simulations d’impacts.
+Application Streamlit en mode sombre d’analyse d’un e-drive automobile : exploration du produit, risques fournisseurs et simulations d’impacts.
 
 ## Setup
 
@@ -31,8 +31,9 @@ Activer ensuite **Utiliser Ollama** dans le chatbot. Le serveur écoute sur `127
 ## Fonctionnement
 
 - **Product Explorer** : arborescence, fiches des composants, fournisseurs, historique et contrôle des données.
-- **Risques et interdépendances** : scores détaillés, complexité, interfaces et origine des fournisseurs.
-- **Analyse d’impacts** : comparaison à la référence après rupture, variation du prix matière, changement de fournisseur, release, allègement ou modification d’une pièce.
+- **Risques et interdépendances** : scores détaillés, complexité, interfaces et origine des fournisseurs. Priorités réglables par critère : Élevé / Normal / Faible (poids 30 / 20 / 10, normalisés sur 100), appliquées dans toutes les analyses.
+- **Analyse d’impacts** : comparaison à la référence après rupture, variation du coût matière, changement de fournisseur, maturité ou modification d’une pièce. Des aides contextuelles expliquent les indicateurs.
+- **Suivi de versions** : charger un XML de même structure, consulter les écarts par pièce et comparer les indicateurs d’analyse d’impacts avec le bouton dédié.
 - **Chatbot** : questions sur le produit et appels aux outils de calcul, avec sources PLM. Les filtres sont normalisés et les résultats chiffrés sont restitués par le code.
 
 Le XML fournit les données d’entrée. L’application calcule les scores, alertes, constats, notes fournisseurs et résumés historiques. Les simulations modifient une copie du produit.

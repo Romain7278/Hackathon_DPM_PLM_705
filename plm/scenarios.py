@@ -40,31 +40,48 @@ RAW_CRITERIA = [
     dict(key="cost", label="Poids dans le coût", max=5, scale="5 % ou plus de la nomenclature : 5. De 2 à 5 % : 3. Moins : 1."),
 ]
 
-# Chaque groupe contribue au plus un sixième du score. Les sous-critères
-# sont d'abord normalisés pour ne pas favoriser leur ancien barème.
+PRIORITY_WEIGHTS = {"Élevé": 30, "Normal": 20, "Faible": 10}
+
+# Les sous-critères sont normalisés avant application des priorités.
 CRITERIA = [
     dict(key="sourcing", label="Résilience d’approvisionnement", members=("sources", "replacement"), scale="Moyenne des risques de qualification (0–30) et de remplacement (0–15), normalisés sur 100."),
     dict(key="lead_time", label="Délai de livraison", members=("lead_time",), scale="Moins de 30 j : 25 %. 30–59 j ou inconnu : 62,5 %. 60 j et plus : 100 %."),
     dict(key="supplier", label="Robustesse fournisseur", members=("finance", "origin"), scale="Moyenne des risques financier (A : 0, B : 3, C : 8) et géographique (faible : 0, moyen : 5, élevé : 8), chacun sur 8."),
-    dict(key="function", label="Criticité intrinsèque", members=("class", "complexity"), scale="Moyenne de la classe (A : 8, B : 4, C : 1, sur 8) et de la complexité (1, 4, 7 ou 10, sur 10)."),
+    dict(key="function", label="Importance fonctionnelle", members=("class", "complexity"), scale="Moyenne de la classe (A : 8, B : 4, C : 1, sur 8) et de la complexité (1, 4, 7 ou 10, sur 10)."),
     dict(key="interfaces", label="Interdépendances", members=("interfaces",), scale="Aucune : 0 %. 1–2 : 25 %. 3–4 : 62,5 %. 5 et plus : 100 %."),
     dict(key="cost", label="Poids dans le coût", members=("cost",), scale="Moins de 2 % du coût : 20 %. De 2 à moins de 5 % : 60 %. 5 % et plus : 100 %."),
 ]
-for criterion in CRITERIA:
-    criterion["max"] = 100 / len(CRITERIA)
+CRITERION_DEFINITIONS = {
+    "sourcing": "Possibilité de poursuivre l'approvisionnement grâce aux sources qualifiées et aux alternatives disponibles.",
+    "lead_time": "Temps nécessaire au fournisseur principal pour livrer la pièce.",
+    "supplier": "Exposition aux difficultés financières du fournisseur et aux risques de son pays.",
+    "function": "Importance de la pièce pour le fonctionnement du produit et difficulté de sa fabrication.",
+    "interfaces": "Liens avec d'autres pièces susceptibles de propager les conséquences d'un changement.",
+    "cost": "Part du coût de la pièce, quantités comprises, dans le coût total du produit.",
+}
 
 
-def grouped_breakdown(points, details, technical=0):
+def risk_criteria(priorities=None):
+    priorities = priorities or {}
+    weights = {c['key']: PRIORITY_WEIGHTS[priorities.get(c['key'], 'Normal')] for c in CRITERIA}
+    total = sum(weights.values())
+    return [{**c, 'priority': priorities.get(c['key'], 'Normal'), 'weight': weights[c['key']],
+             'max': 100 * weights[c['key']] / total, 'definition': CRITERION_DEFINITIONS[c['key']]}
+            for c in CRITERIA]
+
+
+def grouped_breakdown(points, details, technical=0, priorities=None):
     maxima = {c["key"]: c["max"] for c in RAW_CRITERIA}
     result = []
-    for criterion in CRITERIA:
+    for criterion in risk_criteria(priorities):
         members = criterion["members"]
         ratio = sum(points[key] / maxima[key] for key in members) / len(members)
         value = ratio * criterion["max"]
         detail = " ; ".join(details[key] for key in members)
         if criterion["key"] == "function" and technical:
-            value = min(criterion["max"], value + technical)
-            detail += f" ; changement technique : +{technical} pts, plafonné au maximum du critère"
+            adjustment = technical * criterion['max'] / (100 / len(CRITERIA))
+            value = min(criterion["max"], value + adjustment)
+            detail += f" ; changement technique : +{adjustment:g} pts, plafonné au maximum du critère"
         result.append(dict(key=criterion["key"], label=criterion["label"], max=criterion["max"], points=value, detail=detail))
     return result
 
@@ -74,7 +91,7 @@ def interface_points(count):
 
 
 def criticality(model):
-    """Score de risque sur 100 : somme de 6 critères de même poids.
+    """Score de risque sur 100 : somme de 6 critères pondérés par priorité.
     Une pièce de classe A ou B avec au plus un fournisseur qualifié est toujours « Critique »."""
     total_cost = model.bom_cost()
     rows = []
@@ -160,7 +177,7 @@ def criticality(model):
             add("technical", technical, "Option d'allègement non éprouvée")
             reasons.append("Changement technique en cours")
 
-        breakdown = grouped_breakdown(points, details, technical)
+        breakdown = grouped_breakdown(points, details, technical, model.risk_priorities)
         score = min(round(sum(b["points"] for b in breakdown)), 100)
         level = next(name for name, threshold in LEVELS if score >= threshold)
         single_source = model.is_single_source(part)

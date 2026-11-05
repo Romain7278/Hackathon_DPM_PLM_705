@@ -133,7 +133,8 @@ class Node:
 
 
 class PlmModel:
-    def __init__(self, data):
+    def __init__(self, data, risk_priorities=None):
+        self.risk_priorities = dict(risk_priorities or {})
         self.data = data
         self.products = data["products"]
         self.instances = data["instances"]
@@ -419,12 +420,12 @@ class PlmModel:
         return list(found.values())
 
 
-def load_model(xml_path=DATA_XML):
+def load_model(xml_path=DATA_XML, risk_priorities=None):
     from plm.quality import run_checks
 
     data = parse_plm(xml_path)
     if data["enrichment"] is None:
         raise ValueError("Ce XML ne contient pas les données d’enrichissement nécessaires aux analyses.")
-    model = PlmModel(data)
+    model = PlmModel(data, risk_priorities=risk_priorities)
     model.findings = run_checks(model)
     return model

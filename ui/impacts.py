@@ -1,13 +1,12 @@
-"""Onglet Analyse d'impacts : six facteurs combinables et comparaison à la référence."""
+"""Onglet Analyse d'impacts : cinq facteurs combinables et comparaison à la référence."""
 from datetime import date
 from html import escape
 
-import plotly.graph_objects as go
 import streamlit as st
 
 from plm import impact, scenarios
-from plm.fmt import compact_eur, eur, kg, number, pct, signed_compact_eur, signed_eur, signed_kg
-from plm.model import FAMILIES
+from plm.fmt import compact_eur, eur, kg, number, pct, signed_eur, signed_kg
+from plm.model import FAMILIES, MATURITY_RANK
 from ui import theme
 from ui.state import open_from_table
 
@@ -61,7 +60,6 @@ def defaults(model):
         "ia_s2_on": False, "ia_s2_material": "Cuivre", "ia_s2_pct": 15,
         "ia_s3_on": False, "ia_s3_from": ELEMENTS_PRIMARY, "ia_s3_to": BEST_ALTERNATIVE, "ia_s3_share": 100,
         "ia_s4_on": False, "ia_s4_target": "RELEASED", "ia_s4_gate": date.fromisoformat(model.program["release_gate_date"]),
-        "ia_s5_on": False, "ia_s5_target": float(model.program["mass_target_kg"]), "ia_s5_options": [],
         "ia_s6_on": False, "ia_s6_part": model.physical_parts[0]["xml_id"], "ia_s6_mass_pct": 0, "ia_s6_weeks": 8,
         "ia_s6_kind": "geometry", "ia_s6_complexity_delta": 0,
     }
@@ -84,8 +82,6 @@ def read_params():
         params["change"] = {"from": None if state.ia_s3_from == ELEMENTS_PRIMARY else state.ia_s3_from, "to": None if state.ia_s3_to == BEST_ALTERNATIVE else state.ia_s3_to, "share": state.ia_s3_share}
     if state.ia_s4_on:
         params["release"] = {"target": state.ia_s4_target, "gate": state.ia_s4_gate.isoformat()}
-    if state.ia_s5_on:
-        params["mass"] = {"target_kg": state.ia_s5_target, "options": state.ia_s5_options}
     if state.ia_s6_on:
         params["versioning"] = {"part": state.ia_s6_part, "mass_pct": state.ia_s6_mass_pct, "weeks": state.ia_s6_weeks,
                                "kind": state.ia_s6_kind, "interfaces": state.ia_s6_interfaces,
@@ -104,7 +100,6 @@ def render_settings(model):
     options = element_options(model)
     suppliers = {s: model.suppliers[s]["name"] for s in sorted(model.suppliers, key=lambda s: model.suppliers[s]["name"])}
     active = [s for s in suppliers if model.supplier_parts(s)]
-    mass_options = {o["option_id"]: o for o in scenarios.mass_options(model, model.tree.id)}
 
     def supplier_label(value):
         return {ELEMENTS_PRIMARY: "Fournisseur principal des éléments", BEST_ALTERNATIVE: "Meilleure alternative"}.get(value) or suppliers[value]
@@ -116,17 +111,17 @@ def render_settings(model):
         head[1].button("Réinitialiser", key="reset_impacts", on_click=reset_params, args=(model,), width="stretch")
 
         state = st.session_state
-        columns = [*st.columns(3, gap="small"), *st.columns(3, gap="small")]
+        columns = [*st.columns(3, gap="small"), *st.columns(2, gap="small")]
         with columns[0], st.container(border=True, height="stretch"):
             st.toggle("Rupture fournisseur", key="ia_s1_on")
             off = not state.ia_s1_on
             st.selectbox("Fournisseur à l'arrêt", [ELEMENTS_PRIMARY, *active], key="ia_s1_supplier", format_func=supplier_label, disabled=off)
             st.slider("Durée (semaines)", 1, 30, key="ia_s1_weeks", disabled=off)
         with columns[1], st.container(border=True, height="stretch"):
-            st.toggle("Prix d'un matériau", key="ia_s2_on")
+            st.toggle("Coût d'un matériau", key="ia_s2_on")
             off = not state.ia_s2_on
             st.selectbox("Matériau", material_options(model), key="ia_s2_material", disabled=off, help="Une famille regroupe toutes ses nuances. Vous pouvez aussi choisir une seule nuance.")
-            st.slider("Variation (%)", -40, 60, key="ia_s2_pct", disabled=off, help="Seule la part indexée du prix suit le marché.")
+            st.slider("Variation (%)", -40, 60, key="ia_s2_pct", disabled=off, help="Variation du coût matière selon les conditions du matériau.")
         with columns[2], st.container(border=True, height="stretch"):
             st.toggle("Changement de fournisseur", key="ia_s3_on")
             off = not state.ia_s3_on
@@ -134,18 +129,14 @@ def render_settings(model):
             st.selectbox("Nouveau fournisseur", [BEST_ALTERNATIVE, *suppliers], key="ia_s3_to", format_func=supplier_label, disabled=off, help="Il doit être référencé pour la pièce.")
             st.slider("Part de volume déplacée (%)", 10, 100, step=10, key="ia_s3_share", disabled=off)
         with columns[3], st.container(border=True, height="stretch"):
-            st.toggle("Release", key="ia_s4_on")
+            st.toggle("Maturité", key="ia_s4_on")
             off = not state.ia_s4_on
             st.selectbox("Maturité visée", ["FROZEN", "RELEASED"], key="ia_s4_target", disabled=off)
-            st.date_input("Jalon", key="ia_s4_gate", format="DD/MM/YYYY", disabled=off, help="Sans élément choisi : seules les pièces prévues à temps sont promues. Avec des éléments : ils sont promus quoi qu'il arrive.")
-        with columns[4], st.container(border=True, height="stretch"):
-            st.toggle("Allègement", key="ia_s5_on")
-            off = not state.ia_s5_on
-            st.slider("Masse cible (kg)", 85.0, 100.0, step=0.5, key="ia_s5_target", disabled=off)
-            st.multiselect("Options imposées", list(mass_options), key="ia_s5_options", disabled=off, placeholder="Plan au meilleur coût",
-                           format_func=lambda o: f"{mass_options[o]['part']} : {mass_options[o]['label']} ({signed_kg(mass_options[o]['delta_mass'])})")
+            with st.popover("Comprendre les statuts", icon=":material/info:"):
+                st.markdown("**PRIVATE** : brouillon privé.\n\n**IN_WORK** : conception en cours.\n\n**FROZEN** : conception figée, en attente de validation finale.\n\n**RELEASED** : version validée et publiée pour utilisation.\n\n**OBSOLETE** : version retirée de l'utilisation.")
+            st.caption("La maturité visée est appliquée aux éléments sélectionnés. Sans sélection, la projection suit le calendrier de validation du programme.")
 
-        with columns[5], st.container(border=True, height="stretch"):
+        with columns[4], st.container(border=True, height="stretch"):
             st.toggle("Versioning · pièce modifiée", key="ia_s6_on")
             off = not state.ia_s6_on
             st.selectbox("Pièce modifiée", [p["xml_id"] for p in model.physical_parts], key="ia_s6_part", format_func=model.node_label, disabled=off, on_change=reset_change_fields)
@@ -210,21 +201,20 @@ def share_groups(items):
     return groups
 
 
-def render_cards(model, result):
+def render_cards(model, result, comparison_label="Scénario", show_shares=True):
     data = result["indicators"]
     mass_before, mass_after = data["mass"]
     cost_before, cost_after = data["cost"]
     margin_before, margin_after = data["margin_pct"]
-    annual = data["annual_cost"][1] - data["annual_cost"][0]
     critical_before, critical_after = data["critical"]
     mono_before, mono_after = data["single_source"]
     count_scale = max(critical_before, critical_after, mono_before, mono_after, 1) * 1.2
     cost_scale = max(cost_before, cost_after) * 1.1
     mass_scale = max(mass_before, mass_after) * 1.1
 
-    quality_groups = [scored_group("Score qualité du produit", data["quality"]["product"], HIGHER_IS_GOOD)]
+    quality_groups = [scored_group("Qualité du produit", data["quality"]["product"], HIGHER_IS_GOOD)]
     if data["quality"]["touched"]:
-        quality_groups.append(scored_group("Score qualité des pièces touchées", data["quality"]["touched"], HIGHER_IS_GOOD))
+        quality_groups.append(scored_group("Qualité des pièces touchées", data["quality"]["touched"], HIGHER_IS_GOOD))
     risk_groups = [scored_group("Score de risque du produit", data["risk"]["product"], HIGHER_IS_BAD)]
     if data["risk"]["touched"]:
         risk_groups.append(scored_group("Score de risque des pièces touchées", data["risk"]["touched"], HIGHER_IS_BAD))
@@ -235,21 +225,40 @@ def render_cards(model, result):
 
     margin_points = (margin_after - margin_before) * 100
     cards = [
-        card("Poids", [bar_group("Masse de l'e-drive", mass_before, mass_after, kg(round(mass_before, 2)), kg(round(mass_after, 2)),
+        card("Masse", [bar_group("Masse de l'e-drive", mass_before, mass_after, kg(round(mass_before, 2)), kg(round(mass_after, 2)),
                                  delta_badge(mass_after - mass_before, f"{signed_kg(round(mass_after - mass_before, 2))} ({signed((mass_after / mass_before - 1) * 100)} %)", HIGHER_IS_BAD), mass_scale)],
              foot=f"Cible OEM : {kg(model.program['mass_target_kg'])}."),
-        card("Prix", [
+        card("Coût", [
             bar_group("Coût nomenclature par e-drive", cost_before, cost_after, eur(cost_before, 2), eur(cost_after, 2),
                       delta_badge(cost_after - cost_before, f"{signed_eur(cost_after - cost_before, 2)} ({signed((cost_after / cost_before - 1) * 100)} %)", HIGHER_IS_BAD), cost_scale),
-            bar_group("Marge sur le prix de vente", margin_before, margin_after, pct(margin_before, 1), pct(margin_after, 1),
+            bar_group("Marge commerciale", margin_before, margin_after, pct(margin_before, 1), pct(margin_after, 1),
                       delta_badge(margin_points, f"{signed(margin_points)} pt", HIGHER_IS_GOOD, tolerance=0.05), max(margin_before, margin_after, 0.01) * 1.2),
-        ], foot=f"Effet annuel à {number(model.program['annual_volume'])} e-drives : {signed_compact_eur(annual)}." if abs(cost_after - cost_before) >= 0.005 else None),
+        ]),
         card("Qualité", quality_groups),
         card("Risque", risk_groups),
-        card("Poids du fournisseur dans le coût global", share_groups(data["suppliers"])),
-        card("Poids du matériau dans le coût global", share_groups(data["materials"])),
+        card("Part des fournisseurs dans le coût global", share_groups(data["suppliers"])),
+        card("Part des matériaux dans le coût global", share_groups(data["materials"])),
     ]
-    st.html(f'<div class="ia-grid">{"".join(cards)}</div>')
+    titles = ["Masse", "Coût", "Qualité", "Risque", "Part des fournisseurs", "Part des matériaux"]
+    descriptions = [
+        "Somme des masses unitaires × quantités de la nomenclature. Sert à mesurer l'effet sur la masse de l'ensemble et la cible du programme.",
+        "Coût nomenclature : somme des coûts unitaires × quantités. Le coût d'une pièce est pondéré par les volumes de ses fournisseurs actifs. Marge : (montant de vente − coût nomenclature − assemblage et validation) / montant de vente. Sert à évaluer l'impact économique par produit.",
+        "Score sur 100 : plus il est élevé, mieux c'est. Il combine les défauts fournisseurs (35 points), les livraisons à l'heure (15), la qualification (25), la maturité (15) et les données renseignées (10). La moyenne donne plus d'importance aux pièces de classe A, puis B, puis C.",
+        "Risque sur 100 : plus il est élevé, plus la pièce est exposée. Les priorités choisies dans Risques et interdépendances (Élevé 30, Normal 20, Faible 10) sont normalisées sur 100. "
+        + " · ".join(f"{c['label']} : {c['max']:.1f} points maximum" for c in scenarios.risk_criteria(model.risk_priorities))
+        + ". Moyenne par classe A ×3, B ×2, C ×1. Une pièce A/B avec au plus une source qualifiée reste classée critique, quel que soit son score.",
+        "Coût des achats attribué à chaque fournisseur / coût total de la nomenclature. Les volumes de chaque pièce déterminent la répartition. Sert à identifier une concentration des achats ; une hausse de part n'est pas automatiquement défavorable.",
+        "Coût de matière consommée pour une famille (masse utilisée × coût au kg × quantités) / coût total de la nomenclature. Sert à repérer les familles qui concentrent les dépenses.",
+    ]
+    count, columns_per_row = (6, 3) if show_shares else (4, 2)
+    for start in range(0, count, columns_per_row):
+        for i, column in zip(range(start, start + columns_per_row), st.columns(columns_per_row)):
+            with column, st.container(border=True):
+                label, help_button = st.columns([5, 2], vertical_alignment="center")
+                label.markdown(f"**{titles[i]}**")
+                with help_button.popover("?", width="content"):
+                    st.write(descriptions[i])
+                st.html(cards[i].replace(f"<h5>{escape(titles[i])}</h5>", "").replace("<h5>Part des fournisseurs dans le coût global</h5>", "").replace("<h5>Part des matériaux dans le coût global</h5>", "").replace(">Scénario<", f">{escape(comparison_label)}<"))
 
 
 # ------------------------------------------------------------------ Résultats complémentaires par facteur
@@ -258,81 +267,65 @@ def render_cards(model, result):
 def render_disruption(model, detail):
     if not detail.get("parts"):
         return
-    strategies = detail["strategies"]
-    wait, best = strategies["wait"], strategies[detail["best"]]
-    st.markdown(f"**Rupture de {detail['weeks']} semaines** : {detail['parts']} pièce(s) à l'arrêt, le fournisseur est retiré des indicateurs ci-dessus le temps de l'arrêt")
-    columns = st.columns(5)
-    columns[0].metric("E-drives perdus sans action", number(wait["lost_units"]))
-    columns[1].metric("Arrêt de ligne sans action", f"{number(wait['stop_days'])} jours", help="Toute la ligne s'arrête dès qu'une pièce manque.")
-    columns[2].metric("Coût sans action", compact_eur(wait["total_cost"]), help="Marge perdue, pénalité d'arrêt de ligne et surcoûts.")
-    columns[3].metric("Meilleure stratégie", best["label"])
-    columns[4].metric("Coût de cette stratégie", compact_eur(best["total_cost"]))
-    with st.expander("Courbe de livraison par stratégie"):
-        fig = go.Figure()
-        weeks = list(range(1, len(wait["delivered"]) + 1))
-        fig.add_scatter(x=weeks, y=[model.program["weekly_demand"]] * len(weeks), name="Demande", mode="lines", line=dict(color=theme.BASELINE, width=2, dash="dot"), hovertemplate="%{y:,.0f}<extra>Demande</extra>")
-        for index, name in enumerate(("wait", "reallocate", "emergency")):
-            strategy = strategies[name]
-            fig.add_scatter(x=weeks, y=strategy["delivered"], name=strategy["label"], mode="lines", line=dict(color=theme.SERIES[index], width=2), hovertemplate="%{y:,.0f}<extra>" + strategy["label"] + "</extra>")
-        theme.style_figure(fig, height=300, margin=dict(l=8, r=16, t=30, b=8))
-        fig.update_xaxes(title_text="Semaine")
-        fig.update_yaxes(title_text="E-drives livrés par semaine", rangemode="tozero")
-        theme.show(fig, key="impact_delivery")
+    st.markdown(f"**Rupture fournisseur · {detail['weeks']} semaines**")
+    columns = st.columns(3)
+    columns[0].metric("Fournisseurs en retard", len({row['from'] for row in detail['rows']}), help="Nombre de fournisseurs distincts interrompus dans le périmètre simulé.")
+    columns[1].metric("Pièces substituables", sum(row['to'] is not None for row in detail['rows']), help="Références disposant d'une alternative qualifiée et capable de reprendre le volume pendant la rupture.")
+    columns[2].metric("Délai global", f"{number(max(row['delay_weeks'] for row in detail['rows']), 1)} semaines", help="Plus long délai parmi les pièces : mobilisation de l'alternative ou retard équivalent de production sans alternative. Les délais ne s'additionnent pas.")
+    for row in detail["rows"]:
+        with st.container(border=True):
+            st.markdown(f"**{row['part']}** · fournisseur interrompu : {row['from']}")
+            if row["to"]:
+                st.success(f"Substitution simulée vers {row['to']}. Coût unitaire de la pièce : {eur(row['before'], 2)} → {eur(row['after'], 2)} ({signed_eur(row['after'] - row['before'], 2)}).")
+                if row['delay_weeks']:
+                    st.caption(f"Délai de mobilisation du fournisseur : {number(row['delay_weeks'], 1)} semaine(s). Les indicateurs représentent l'état après cette mobilisation, pendant la rupture.")
+            else:
+                st.warning(f"Aucun fournisseur alternatif qualifié, mobilisable pendant la rupture et avec une capacité suffisante. Pièce impactée : {row['part']}. Retard équivalent estimé : {number(row['delay_weeks'], 1)} semaine(s) de production.")
+                st.caption("Estimation après consommation des stocks et des approvisionnements en transit, en tenant compte des sources restantes et de la reprise du fournisseur.")
 
 
 def render_price(model, detail, indicators):
-    if not detail["parts"]:
-        return
-    delta = indicators["cost"][1] - indicators["cost"][0]
-    st.markdown(f"**Prix de {detail['material']} : {signed(detail['pct'], 0)} %** sur {detail['parts']} pièce(s), soit {signed_eur(delta, 2)} par e-drive à plein régime. Seule la part indexée du prix suit le marché.")
+    if detail["parts"]:
+        st.markdown(f"**Coût matière · {detail['material']} : {signed(detail['pct'], 0)} %** · {detail['parts']} pièce(s) concernée(s).")
 
 
 def render_change(model, detail):
     if not detail["parts"]:
         return
     st.markdown("**Changement de fournisseur** : indicateurs calculés une fois le nouveau fournisseur qualifié")
-    columns = st.columns(4)
+    columns = st.columns(3)
     columns[0].metric("Pièces concernées", detail["parts"])
     columns[1].metric("Sans alternative", len(detail["no_alternative"]))
     columns[2].metric("Coût unique", compact_eur(detail["one_off"]), help="Coût de bascule et essais de revalidation si le fournisseur n'est pas encore en qualification.")
-    columns[3].metric("Délai maximal", f"{detail['max_delay']} semaines", help=f"{number(model.weeks_to_sop)} semaines avant le démarrage série.")
     if detail["no_alternative"]:
         st.warning(f"Aucune solution de remplacement référencée pour : {', '.join(detail['no_alternative'])}. Ces pièces restent chez le fournisseur actuel dans les indicateurs.")
-    if detail["max_delay"] > model.weeks_to_sop:
-        st.warning(f"Le délai de {detail['max_delay']} semaines dépasse les {number(model.weeks_to_sop)} semaines restant avant le démarrage série.")
-
 
 def render_release(detail):
-    before, after = detail["before"], detail["after"]
-    theme.verdict(f"{'GO' if after['go'] else 'NO-GO'} pour {detail['target']} au {date.fromisoformat(detail['gate']).strftime('%d/%m/%Y')} : {after['ready']} pièces prêtes sur {after['total']}", after["go"])
-    columns = st.columns(4)
-    columns[0].metric("Pièces prêtes, référence", f"{before['ready']} / {before['total']}")
-    columns[1].metric("Pièces prêtes, scénario", f"{after['ready']} / {after['total']}", delta=after["ready"] - before["ready"] or None)
-    columns[2].metric("Date au plus tôt", date.fromisoformat(after["earliest_date"]).strftime("%d/%m/%Y"), help="Date à laquelle toutes les pièces restantes peuvent être prêtes, selon les plans de release et de PPAP.")
-    columns[3].metric("Assemblages à corriger", len(after["corrections"]), help="Assemblages plus avancés que leurs sous-composants.")
+    after = detail["after"]
+    maturities = detail["maturities"]
+    current = sorted({row['Maturité actuelle'] for row in maturities}, key=MATURITY_RANK.get)
+    st.markdown("#### Situation actuelle")
+    if current:
+        with st.container(key="maturity_situation"):
+            for status, column in zip(current, st.columns(len(current))):
+                column.metric(status, sum(row['Maturité actuelle'] == status for row in maturities))
+        nonconforming = [{"Pièce": row['Pièce'], "Maturité actuelle": row['Maturité actuelle']}
+                         for row in maturities if MATURITY_RANK[row['Maturité actuelle']] < MATURITY_RANK[detail['target']]]
+        if nonconforming:
+            st.markdown("**Pièces dont la maturité n’est pas conforme**")
+            st.dataframe(nonconforming, hide_index=True, width="stretch")
+        else:
+            st.success("Toutes les pièces du périmètre ont une maturité conforme.")
+    else:
+        st.info("Aucune pièce dans le périmètre.")
+    st.metric("Assemblages à corriger", len(after["corrections"]), help="Assemblages plus avancés que leurs sous-composants.")
     remaining = [f"{r['part']} ({r['status'].lower()})" for r in after["rows"] if r["in_scope"] and not r["ready"]]
     if remaining:
         st.caption("Restent à traiter : " + ", ".join(remaining) + ".")
     if after["corrections"]:
         st.caption("Assemblages à corriger : " + ", ".join(after["corrections"]) + ".")
     if after["excluded"]:
-        st.caption("Hors périmètre, géométries d'étude à retirer de la nomenclature : " + ", ".join(after["excluded"]) + ".")
-
-
-def render_mass(model, detail):
-    automatic = "plan au meilleur coût, options à faisabilité moyenne ou élevée" if detail["automatic"] else "options imposées"
-    st.markdown(f"**Allègement** : {automatic}, masse cible {kg(detail['target_kg'])}")
-    columns = st.columns(5)
-    columns[0].metric("Masse gagnée", kg(round(detail["saved_kg"], 2)))
-    columns[1].metric("Surcoût par e-drive", signed_eur(detail["delta_cost_unit"], 2))
-    columns[2].metric("Coût unique", compact_eur(detail["one_off"]), help="Outillage et requalification.")
-    columns[3].metric("Délai maximal", f"{detail['max_weeks']} semaines", help=f"{number(model.weeks_to_sop)} semaines avant le démarrage série.")
-    columns[4].metric("CO2 matière", f"{signed(detail['delta_co2'])} kg CO2e", help="Écart par e-drive.")
-    if detail["chosen"]:
-        st.dataframe([{"Pièce": o["part"], "Option": o["label"], "Gain (kg)": round(-o["delta_mass"], 3), "Surcoût (€)": round(o["delta_cost"], 2), "Faisabilité": o["feasibility_label"], "Délai (semaines)": o["weeks"], "Risque": o["risk"]} for o in detail["chosen"]], hide_index=True, width="stretch",
-                     column_config={"Gain (kg)": st.column_config.NumberColumn(format="localized"), "Surcoût (€)": st.column_config.NumberColumn(format="localized")})
-    else:
-        st.info("Aucune option d'allègement applicable avec ces paramètres.")
+        st.caption("Hors périmètre : " + ", ".join(after["excluded"]) + ".")
 
 
 def render_touched(model, rows):
@@ -355,39 +348,18 @@ def render_touched(model, rows):
 
 def render_versioning(detail):
     st.markdown(f"**Impact de la modification · {detail['part']} · {CHANGE_KINDS[detail['kind']]}**")
-    columns = st.columns(4)
+    columns = st.columns(2)
     columns[0].metric("Revalidation", f"{detail['weeks']} semaines")
-    columns[1].metric("Fin de revalidation prévue", date.fromisoformat(detail['planned_release']).strftime('%d/%m/%Y'))
-    columns[2].metric("Interfaces à revérifier", detail['interfaces'])
-    columns[3].metric("Coût unique des essais", compact_eur(detail['one_off']))
-    st.caption("État simulé après modification : pièce en IN_WORK, qualification des fournisseurs remise en cours. "
-               "La variation de prix suit la matière consommée ; la conversion est conservée. "
-               "Le délai couvre aussi l’essai le plus long. Le coût unique est présenté séparément du coût par e-drive.")
+    columns[1].metric("Interfaces à revérifier", detail['interfaces'])
+    st.caption("État simulé après modification : nouvelle révision en IN_WORK, qualification des fournisseurs remise en cours. Les interfaces sélectionnées entraînent une revérification des pièces liées.")
     st.markdown("**Impact sur les critères de risque de la pièce**")
     st.dataframe([{"Critère": r['criterion'], "Points avant": round(r['before'], 2), "Points après": round(r['after'], 2), "Écart": round(r['after'] - r['before'], 2), "Explication": r['detail']} for r in detail['criteria']], hide_index=True, width="stretch")
     with st.expander("Impact sur les critères de qualité"):
         st.dataframe([{"Critère": r['criterion'], "Points avant": round(r['before'], 2), "Points après": round(r['after'], 2), "Écart": round(r['after'] - r['before'], 2)} for r in detail['quality_criteria']], hide_index=True, width="stretch")
     if detail['neighbors']:
         st.markdown("**Pièces liées à revérifier**")
-        st.dataframe([{"Pièce": r['part'], "Interface": r['type'], "Contrôle": r['test']} for r in detail['neighbors']], hide_index=True, width="stretch")
-    if detail['tests']:
-        st.dataframe([{"Essai": test['test'], "Coût (€)": test['cost_eur']} for test in detail['tests']], hide_index=True, width="stretch")
+        st.dataframe([{"Pièce": r['part'], "Interface": r['type']} for r in detail['neighbors']], hide_index=True, width="stretch")
     st.caption("Chaînes d’assemblage concernées : " + " · ".join(detail['assemblies']))
-
-
-def render_method():
-    with st.expander("Comment les scores sont calculés"):
-        st.markdown("**Score qualité d'une pièce, sur 100**")
-        theme.table(["Critère", "Max", "Calcul"], [(c["label"], c["max"], c["rule"]) for c in impact.QUALITY_CRITERIA], numeric=(1,))
-        st.markdown(
-            "Une option d'allègement retire 5 points si sa faisabilité est moyenne, 15 si elle est faible.\n\n"
-            "**Score de risque d'une pièce, sur 100** : barème détaillé dans l'onglet Risques et interdépendances. "
-            "Une option d'allègement augmente le critère Criticité intrinsèque, dans sa limite de 16,67 points.\n\n"
-            "**Score du produit** : moyenne pondérée par la classe de la pièce (A compte 3 fois, B 2 fois, C 1 fois). "
-            "Le score des pièces touchées fait la même moyenne sur les seules pièces modifiées.\n\n"
-            "**Hypothèses** : la rupture montre l'état pendant l'arrêt, le changement de fournisseur l'état une fois qualifié, "
-            "le prix l'effet à plein régime sans délai contractuel."
-        )
 
 
 def render_results(model, result, active):
@@ -411,13 +383,10 @@ def render_results(model, result, active):
         render_change(model, details["change"])
     if details.get("release"):
         render_release(details["release"])
-    if details.get("mass"):
-        render_mass(model, details["mass"])
     if details.get("versioning"):
         render_versioning(details["versioning"])
     if result["touched"]:
         render_touched(model, result["touched"])
-    render_method()
     if result["sources"]:
         theme.sources_expander(model, result["sources"])
 

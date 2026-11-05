@@ -81,8 +81,8 @@ def relation_graph(model, node):
     lines = [
         "digraph {",
         'rankdir=LR; bgcolor="transparent"; nodesep=0.18; ranksep=0.42;',
-        'node [shape=box, style="rounded,filled", fontname="Segoe UI", fontsize=11, color="#c3c2b7", fillcolor="#f2f1ed", fontcolor="#0b0b0b", margin="0.12,0.05", height=0.28];',
-        'edge [color="#6c6b66", fontname="Segoe UI", fontsize=9, fontcolor="#52514e", arrowsize=0.6];',
+        'node [shape=box, style="rounded,filled", fontname="Segoe UI", fontsize=11, color="#64748b", fillcolor="#293548", fontcolor="#f3f4f6", margin="0.12,0.05", height=0.28];',
+        'edge [color="#94a3b8", fontname="Segoe UI", fontsize=9, fontcolor="#cbd5e1", arrowsize=0.6];',
     ]
     path = node.path()[-2:]
     for step in path:
@@ -104,7 +104,7 @@ def relation_graph(model, node):
             lines.append(f'{quoted(node.id)} -> {quoted("i_" + other.part_id)} [style=dashed, dir=none, label={quoted(label)}];')
         for other in model.nodes_by_part[node.part_id]:
             if other is not node:
-                lines.append(f'{quoted("o_" + other.id)} [label={quoted(other.label + " (même pièce 3D)")}, fillcolor="#fff4d6", color="#fab219"];')
+                lines.append(f'{quoted("o_" + other.id)} [label={quoted(other.label + " (même pièce 3D)")}, fillcolor="#594615", color="#fab219"];')
                 lines.append(f'{quoted(node.id)} -> {quoted("o_" + other.id)} [style=dotted, dir=none];')
     lines.append("}")
     return "\n".join(lines)

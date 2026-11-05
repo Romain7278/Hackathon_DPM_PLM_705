@@ -3,19 +3,19 @@ import streamlit as st
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from plm import quality
+from plm import quality, scenarios
 from plm.model import DATA_XML, load_model
-from ui import chat, explorer, impacts, risks, theme
-from ui.state import MAIN_EXPLORER, MAIN_IMPACTS, MAIN_RISKS, keep_widget_state, reset_for_xml
+from ui import chat, explorer, impacts, risks, theme, versions
+from ui.state import MAIN_EXPLORER, MAIN_IMPACTS, MAIN_RISKS, MAIN_VERSIONS, keep_widget_state, reset_for_xml
 
 st.set_page_config(page_title="PLM Intelligence", page_icon="⚙️", layout="wide")
 theme.inject_css()
 keep_widget_state()
 
 
-@st.cache_resource(show_spinner="Lecture de l'export PLM…")
-def get_model(xml_path, modified, rules_modified):
-    return load_model(xml_path)
+@st.cache_resource(show_spinner="Lecture de l'export PLM…", max_entries=16)
+def get_model(xml_path, modified, rules_modified, risk_priorities):
+    return load_model(xml_path, risk_priorities=dict(risk_priorities))
 
 
 xml_files = {path.name: path for path in sorted(DATA_XML.parent.iterdir()) if path.is_file() and path.suffix.lower() == ".xml"}
@@ -34,14 +34,15 @@ with file_choice:
 selected_xml = xml_files[st.session_state.selected_xml]
 st.caption(f"Fichier étudié : {selected_xml.name}")
 try:
-    model = get_model(str(selected_xml), selected_xml.stat().st_mtime_ns, Path(quality.__file__).stat().st_mtime_ns)
+    priorities = tuple((c['key'], st.session_state.get(f"risk_priority_{c['key']}", 'Normal')) for c in scenarios.CRITERIA)
+    model = get_model(str(selected_xml), selected_xml.stat().st_mtime_ns, Path(quality.__file__).stat().st_mtime_ns, priorities)
 except (ET.ParseError, ValueError, KeyError, TypeError) as error:
     st.error(f"Impossible d’étudier ce fichier : {error}")
     st.stop()
 
 chat.render(model)
 
-tabs = st.tabs([MAIN_EXPLORER, MAIN_RISKS, MAIN_IMPACTS], key="main_tab", on_change="rerun")
+tabs = st.tabs([MAIN_EXPLORER, MAIN_RISKS, MAIN_IMPACTS, MAIN_VERSIONS], key="main_tab", on_change="rerun")
 with tabs[0]:
     if tabs[0].open:
         explorer.render(model)
@@ -51,3 +52,6 @@ with tabs[1]:
 with tabs[2]:
     if tabs[2].open:
         impacts.render(model)
+with tabs[3]:
+    if tabs[3].open:
+        versions.render(model, selected_xml)

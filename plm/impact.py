@@ -35,9 +35,9 @@ def next_revision(part):
     return str(int(current) + 1) if current.isdigit() else current + '.1'
 
 QUALITY_CRITERIA = [
-    dict(key="ppm", label="Qualité fournisseur (PPM)", max=35, rule="100 % à 0 ppm, 0 % à 150 ppm ou plus, moyenne pondérée par la part de volume"),
+    dict(key="ppm", label="Défauts fournisseurs", max=35, rule="PPM = pièces défectueuses par million. 35 points à 0 PPM, 0 à 150 PPM ou plus ; progression linéaire, pondérée par les volumes"),
     dict(key="otd", label="Livraison à l'heure", max=15, rule="0 % à 85 % de livraisons à l'heure ou moins, 100 % à 100 %"),
-    dict(key="ppap", label="Statut PPAP", max=25, rule="Approuvé 100 %, à refaire 60 %, en cours 30 %, non qualifié 0 %"),
+    dict(key="ppap", label="Qualification des fournisseurs", max=25, rule="Approuvé 100 %, à refaire 60 %, en cours 30 %, non qualifié 0 % ; moyenne pondérée par les volumes"),
     dict(key="maturity", label="Maturité", max=15, rule="RELEASED 100 %, FROZEN 75 %, IN_WORK 40 %, PRIVATE 10 %, OBSOLETE 0 %"),
     dict(key="data", label="Complétude des données", max=10, rule="Part renseignée parmi description, matériau, fournisseur, prix et historique"),
 ]
@@ -110,6 +110,34 @@ def snapshot(model):
         "suppliers": supplier_shares(model),
         "materials": material_shares(model),
     }
+
+
+def compare_models(reference, candidate, changed_ids=()):
+    """Les mêmes indicateurs que les scénarios, calculés sur deux exports réels."""
+    before, after = snapshot(reference), snapshot(candidate)
+    changed_ids = set(changed_ids)
+
+    def scores(key):
+        ids_before = [p['xml_id'] for p in reference.physical_parts if p['plm_id'] in changed_ids]
+        ids_after = [p['xml_id'] for p in candidate.physical_parts if p['plm_id'] in changed_ids]
+        return {
+            'product': (weighted_average(reference, before[key]), weighted_average(candidate, after[key])),
+            'touched': (weighted_average(reference, before[key], ids_before), weighted_average(candidate, after[key], ids_after)) if ids_before and ids_after else None,
+        }
+
+    indicators = {key: (before[key], after[key]) for key in ('mass', 'cost', 'margin_pct', 'critical', 'single_source')}
+    indicators.update(quality=scores('quality'), risk=scores('risk'))
+    suppliers = before['suppliers'].keys() | after['suppliers'].keys()
+    indicators['suppliers'] = [
+        {'id': sid, 'label': (candidate.suppliers.get(sid) or reference.suppliers[sid])['name'],
+         'before': before['suppliers'].get(sid, 0), 'after': after['suppliers'].get(sid, 0)}
+        for sid in sorted(suppliers, key=lambda sid: -max(before['suppliers'].get(sid, 0), after['suppliers'].get(sid, 0)))
+    ]
+    indicators['materials'] = [
+        {'label': family, 'before': before['materials'].get(family, 0), 'after': after['materials'].get(family, 0)}
+        for family in sorted(before['materials'].keys() | after['materials'].keys())
+    ]
+    return {'indicators': indicators}
 
 
 class ScenarioBuilder:
@@ -306,7 +334,7 @@ class ScenarioBuilder:
             for link in part["sourcing"]:
                 if "unit_price_eur" in link:
                     link["unit_price_eur"] += delta_part
-            self.touch(part["xml_id"], "Prix matériau")
+            self.touch(part["xml_id"], "Coût matière")
             concerned += 1
         self.track_family(target if target in FAMILIES else self.model.materials[target]["family"])
         self.details["price"] = {"material": target, "pct": pct, "parts": concerned}
@@ -371,30 +399,49 @@ class ScenarioBuilder:
     # ---------------------------------------------------------- Rupture
     def apply_disruption(self, settings):
         supplier_id, weeks = settings.get("supplier"), settings["weeks"]
-        disrupted = []
+        disrupted, rows = [], []
         if not supplier_id and not self.scope:
             self.notes.append("Rupture : choisissez un fournisseur ou des éléments.")
         for part in self.physical_parts():
             part_id = part["xml_id"]
             if not self.in_scope(part_id) or (not supplier_id and not self.scope):
                 continue
-            actives = [l for l in part["sourcing"] if l["share_pct"] > 0]
-            link = next((l for l in actives if l["supplier"] == supplier_id), None) if supplier_id else max(actives, key=lambda l: l["share_pct"], default=None)
+            actives = [link for link in part["sourcing"] if link["share_pct"] > 0]
+            link = next((link for link in actives if link["supplier"] == supplier_id), None) if supplier_id else max(actives, key=lambda link: link["share_pct"], default=None)
             if link is None:
                 continue
             reference = self.model.products[part_id]
-            reference_link = next((l for l in reference["sourcing"] if l["supplier"] == link["supplier"]), None)
+            reference_link = next((item for item in reference["sourcing"] if item["supplier"] == link["supplier"]), None)
             if reference_link is not None and reference_link["share_pct"] > 0:
                 disrupted.append((reference, reference_link))
             self.track_supplier(link["supplier"])
-            # État pendant l'arrêt : le fournisseur sort, les autres sources actives se partagent le volume.
+            demand = self.model.program["weekly_demand"] * self.model.quantity(part_id)
+            # Une substitution doit couvrir le volume déplacé en plus du volume déjà attribué.
+            alternatives = []
+            for other in part["sourcing"]:
+                delay = other["ramp_up_weeks"] + ceil(other["transit_days"] / 7)
+                required = demand * (other["share_pct"] + link["share_pct"]) / 100
+                if (other is not link and other["qualification"] in QUALIFIED
+                        and other["capacity_per_week"] >= required and delay < weeks):
+                    alternatives.append((other, delay))
+            before = self.model.unit_cost(part)[0]
+            target, delay = min(alternatives, key=lambda pair: (pair[1], pair[0].get("unit_price_eur", before)), default=(None, 0))
+            if target is not None:
+                target["share_pct"] += link["share_pct"]
+                self.track_supplier(target["supplier"])
+            else:
+                # Le simulateur tient compte des stocks, des autres sources et du redémarrage.
+                run = scenarios.run_strategy(self.model, part, link, weeks, weeks + 26, "wait")
+                delay = run["stop_days"] / self.model.program["working_days_per_week"]
             part["sourcing"].remove(link)
-            remaining = [l for l in part["sourcing"] if l["share_pct"] > 0]
-            total = sum(l["share_pct"] for l in remaining)
-            for other in remaining:
-                other["share_pct"] = other["share_pct"] * 100 / total
-            self.touch(part_id, "Rupture")
-        self.details["disruption"] = combine_disruption(self.model, disrupted, weeks)
+            self.touch(part_id, "Rupture avec substitution" if target else "Rupture sans alternative")
+            rows.append({"part_id": part_id, "part": self.model.node_label(part_id),
+                         "from": self.model.suppliers[link["supplier"]]["name"],
+                         "to": self.model.suppliers[target["supplier"]]["name"] if target else None,
+                         "before": before, "after": self.model.unit_cost(part)[0], "delay_weeks": delay})
+        # Anciennes données conservées pour les consommateurs du moteur de simulation.
+        self.details["disruption"] = {**combine_disruption(self.model, disrupted, weeks),
+                                      "parts": len(rows), "weeks": weeks, "rows": rows}
 
     # ---------------------------------------------------------- Release
     def apply_release(self, settings):
@@ -428,7 +475,7 @@ class ScenarioBuilder:
 
     def build(self):
         self._roll_up(self.data["root"])
-        return PlmModel(self.data)
+        return PlmModel(self.data, risk_priorities=self.model.risk_priorities)
 
     def _roll_up(self, product_id):
         product = self.products[product_id]
@@ -541,6 +588,11 @@ def analyze(model, params):
     if params.get("release"):
         target, gate = params["release"]["target"], params["release"]["gate"]
         details["release"] = {"before": scenarios.release_readiness(model, target, gate), "after": scenarios.release_readiness(scenario, target, gate), "target": target, "gate": gate}
+        details["release"]["maturities"] = [
+            {"Pièce": model.node_label(p["xml_id"]), "Maturité actuelle": p["maturity"],
+             "Maturité visée": target, "Maturité simulée": scenario.products[p["xml_id"]]["maturity"]}
+            for p in model.physical_parts if not scope or p["xml_id"] in scope
+        ]
 
     rows = [part_row(model, scenario, part_id, builder.touched[part_id], before, after) for part_id in touched_ids]
     rows.sort(key=lambda r: -abs(r["cost_after"] - r["cost_before"]) - abs(r["mass_after"] - r["mass_before"]) - abs(r["risk_after"] - r["risk_before"]))

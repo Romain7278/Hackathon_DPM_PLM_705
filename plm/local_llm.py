@@ -77,7 +77,6 @@ def verified_facts(model, name, payload, arguments):
     if name == "material_price":
         return [f"**Variation du coût : {eur(payload['delta_unit'], 2)} par e-drive**, pour une variation de {payload['pct']:g} % du prix de {payload['family'] or payload['material']}.",
                 f"Coût nomenclature : {eur(payload['bom_before'], 2)} → {eur(payload['bom_after'], 2)} par e-drive.",
-                f"Effet annuel : {eur(payload['delta_annual'])}. {payload['hypothesis']}",
                 *[f"{r['part']} (`{r['plm_id']}`) : {kg(r['usage_kg'])} de matière consommée ; variation de {eur(r['delta_unit'], 2)} par e-drive." for r in payload['rows']]]
     if name == "part_details":
         node = tools.resolve_node(model, arguments['part'])

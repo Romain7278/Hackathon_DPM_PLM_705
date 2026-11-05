@@ -81,7 +81,7 @@ def local_price(model, question):
     result = tools.material_price(model, family, value)
     lines = [
         f"{plural(result['parts'], 'pièce concernée', 'pièces concernées')}, {kg(result['mass_kg'])}",
-        f"{signed_eur(result['delta_unit'], 2)} par e-drive, soit {signed_compact_eur(result['delta_annual'])} par an",
+        f"{signed_eur(result['delta_unit'], 2)} par e-drive",
         f"Marge : {pct(result['margin_pct_before'], 1)} puis {pct(result['margin_pct_after'], 1)}",
         f"{pct(result['share_within_3_months'])} de l'effet arrive sous 3 mois, selon les clauses de prix",
     ]

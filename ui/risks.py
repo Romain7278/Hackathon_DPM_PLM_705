@@ -49,22 +49,34 @@ def render_part_detail(model, rows):
     part_id = st.selectbox("Pièce", list(by_id), key="risk_detail_part", format_func=lambda p: f"{by_id[p]['name']} ({by_id[p]['score']})")
     row = by_id[part_id]
     theme.badges([(f"Score {row['score']} sur 100", None), (row["level"], theme.LEVEL_COLORS[row["level"]]), (f"Classe {row['class']}", None), (f"{row['sources_qualified']} qualifié(s) sur {row['sources_referenced']}", None)])
-    theme.table(["Critère", "Points", "Max", "Justification"], [(b["label"], number(b["points"], 1), number(b["max"], 2), b["detail"]) for b in row["breakdown"]], numeric=(1, 2))
+    theme.table(["Critère", "Points", "Justification"], [(b["label"], number(b["points"], 1), b["detail"]) for b in row["breakdown"]], numeric=(1,))
     st.caption(f"Niveau retenu : {row['level']}. {row['level_reason']}.")
     st.button("Ouvrir la fiche", key="risk_open_part", on_click=open_part, args=(model.nodes_by_part[part_id][0].id,))
 
 
-def render_method(rows):
+def render_method():
     st.markdown("##### Comment le score est calculé")
-    st.markdown("**6 critères de même poids : chacun vaut au maximum 16,67 points.** "
-                "Les sous-critères combinés sont normalisés puis moyennés. Le total est arrondi sur 100.")
-    theme.table(["Critère", "Maximum"], [(c["label"], "16,67 pts") for c in scenarios.CRITERIA])
-    st.caption("Faible < 25 · Modéré 25–44 · Élevé 45–69 · Critique ≥ 70. "
-               "Avec au plus une source qualifiée : classe A/B toujours critique, classe C au moins élevée.")
+    st.caption("Choisissez la priorité de chaque critère : Élevé = 30, Normal = 20, Faible = 10. "
+               "Ces poids sont ramenés à un total de 100 pour conserver un score sur 100. "
+               "Les réglages s'appliquent à toutes les vues et aux outils de calcul.")
+    for criterion in scenarios.CRITERIA:
+        st.segmented_control(criterion['label'], list(scenarios.PRIORITY_WEIGHTS), default='Normal',
+                             required=True, key=f"risk_priority_{criterion['key']}", width="stretch")
+
+
+def render_criticality_info():
+    st.markdown("##### Comprendre la criticité")
+    st.caption("Selon le score : Faible < 25 · Modéré 25–44 · Élevé 45–69 · Critique ≥ 70.")
+    st.markdown(
+        "**Règles automatiques, indépendamment des pondérations :**\n\n"
+        "- Une pièce de **classe A ou B (rôle vital/important dans l’assemblage)** avec **un seul fournisseur** est automatiquement classée **Critique**, même si son score est inférieur à 70.\n"
+        "- Une pièce de **classe C (rôle standard dans l’assemblage)** avec **un seul fournisseur** est automatiquement classée **Élevé au minimum**. Elle reste **Critique** si son score atteint 70.\n\n"
+        "Ces règles s’appliquent également lorsqu’aucun fournisseur n’est disponible."
+    )
     with st.expander("Voir les barèmes"):
-        theme.table(["Critère", "Poids", "Barème"], [(c["label"], "1/6", c["scale"]) for c in scenarios.CRITERIA])
+        theme.table(["Critère", "Définition"], [(c["label"], scenarios.CRITERION_DEFINITIONS[c['key']]) for c in scenarios.CRITERIA])
         st.caption(CLASS_RULES + " La complexité combine procédé (40 %), précision (30 %) et opérations (30 %). "
-                   "Dans un scénario, le changement technique augmente le critère Criticité intrinsèque, plafonné à 16,67 points.")
+                   "Dans un scénario, le changement technique augmente le critère Importance fonctionnelle, dans la limite de sa pondération.")
 
 
 def render_risk_table(model, rows):
@@ -142,7 +154,7 @@ def supplier_map(model):
         hovertext=[f"<b>Candidat</b><br>{r['supplier']}<br>{r['city']}, {r['country']}" for r in candidates], hoverinfo="text",
     ))
     theme.style_figure(fig, height=380, margin=dict(l=0, r=0, t=26, b=0))
-    fig.update_geos(projection_type="natural earth", showland=True, landcolor="#f0efec", showocean=False, showcountries=True, countrycolor="#ffffff", showframe=False, coastlinecolor="#c3c2b7", lataxis_range=[12, 66], lonaxis_range=[-14, 142], bgcolor="rgba(0,0,0,0)")
+    fig.update_geos(projection_type="natural earth", showland=True, landcolor="#293548", showocean=False, showcountries=True, countrycolor="#64748b", showframe=False, coastlinecolor="#64748b", lataxis_range=[12, 66], lonaxis_range=[-14, 142], bgcolor="rgba(0,0,0,0)")
     return fig
 
 
@@ -166,8 +178,9 @@ def render(model):
     with left:
         st.markdown(f"##### Les {TOP_PARTS} composants les plus critiques, détail du score")
         theme.show(score_chart(rows), key="ov_crit")
+        render_criticality_info()
     with right:
-        render_method(rows)
+        render_method()
 
     detail, origin = st.columns(2, gap="medium")
     with detail:

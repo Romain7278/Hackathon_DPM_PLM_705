@@ -269,7 +269,7 @@ def parse_plm(xml_path):
     enrichment = parse_enrichment(root, products)
 
     return {
-        "source_file": Path(xml_path).name,
+        "source_file": Path(xml_path if isinstance(xml_path, (str, Path)) else getattr(xml_path, "name", "XML chargé")).name,
         "header": {i.get("name"): i.get("value") for i in root.find(NS + "InfoHeader")},
         "root": root_id,
         "products": products,

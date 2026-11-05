@@ -190,7 +190,9 @@ def critical_parts(model, top=10):
     fields = ("name", "plm_id", "score", "level", "level_reason", "reasons", "breakdown", "complexity", "complexity_level", "sources_qualified", "sources_referenced", "origin", "interfaces", "mass_kg", "line_cost", "cost_share", "quantity")
     return {
         "levels": {level: sum(r["level"] == level for r in rows) for level, _ in scenarios.LEVELS},
-        "rule": "Score sur 100 : six critères de même poids (100/6 points chacun) : résilience d’approvisionnement, délai, robustesse fournisseur, criticité intrinsèque, interdépendances, poids dans le coût. Classe A/B avec au plus une source qualifiée : Critique ; classe C : au moins Élevé.",
+        "rule": "Score sur 100 : priorités Élevé/Normal/Faible (poids 30/20/10), normalisées sur 100. "
+                + " ; ".join(f"{c['label']} : {c['priority']} ({c['max']:.2f} points maximum)" for c in scenarios.risk_criteria(model.risk_priorities))
+                + ". Classe A/B avec au plus une source qualifiée : Critique ; classe C : au moins Élevé.",
         "parts": [{k: rounded(r[k]) for k in fields} for r in selected],
         "sources": [model.source_ref(r["part_id"], "sourcing, interfaces, masse, coût") for r in selected],
     }

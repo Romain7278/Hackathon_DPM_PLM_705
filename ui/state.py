@@ -4,6 +4,7 @@ import streamlit as st
 MAIN_EXPLORER = "Product Explorer"
 MAIN_RISKS = "Risques et interdépendances"
 MAIN_IMPACTS = "Analyse d'impacts"
+MAIN_VERSIONS = "Suivi de versions"
 EXPLORER_TREE = "Arborescence et fiche"
 
 # Streamlit oublie l'état d'un widget qui n'est plus affiché : on le fige pour retrouver ses réglages en changeant d'onglet.
@@ -20,7 +21,7 @@ def reset_for_xml():
 
 def keep_widget_state():
     for key in list(st.session_state.keys()):
-        if key in PERSISTENT_KEYS or str(key).startswith("ia_"):
+        if key in PERSISTENT_KEYS or str(key).startswith(("ia_", "risk_priority_")):
             st.session_state[key] = st.session_state[key]
 
 
