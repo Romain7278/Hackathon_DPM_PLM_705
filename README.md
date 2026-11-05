@@ -1,5 +1,7 @@
 # PLM Intelligence - Team 705
 
+AU Dax, BEN HONIL Djomegne Kenmogne, BOULMIER Ilan, COGNET Elisabeth, LEFEBVRE Romain, RIFFI Naïl, TAGNY Sandra
+
 Application Streamlit en mode sombre d’analyse d’un e-drive automobile : exploration du produit, risques fournisseurs et simulations d’impacts.
 
 ## Setup
